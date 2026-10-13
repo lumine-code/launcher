@@ -2,7 +2,7 @@
 
 Choose how and where to open files and folders.
 
-Extracted from [tree-view](https://github.com/lumine-code/tree-view).
+Fork of [tree-view](https://github.com/lumine-code/tree-view) (opening actions).
 
 ## Features
 
@@ -36,6 +36,19 @@ Commands available in `.open-with .select-list`:
 ## Usage
 
 Choose Open With from a file or folder's tree context menu, or use the package menu for the active file. The picker marks the action that ordinary opening would use as Default. Window destinations are available only for actions that open editor content; external opening and showing a path in the file manager have no editor-window destination. Folders can open as projects in the current window or a new window. For files, Open uses the current project's active editor pane, while This Window replaces the project with the file's containing directory.
+
+## Customization
+
+Adjust the picker width and badges in your `styles.css`:
+
+```css
+.open-with {
+  max-width: 640px;
+}
+.open-with .badge {
+  border-radius: 4px;
+}
+```
 
 ## Services
 
