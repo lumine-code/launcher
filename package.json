@@ -1,0 +1,60 @@
+{
+  "name": "open-with",
+  "author": "lumine-code",
+  "version": "1.0.0",
+  "description": "Choose how and where to open files and folders.",
+  "keywords": [
+    "opener",
+    "file-manager",
+    "directory",
+    "viewer",
+    "navigation"
+  ],
+  "repository": "https://github.com/lumine-code/open-with",
+  "bugs": {
+    "url": "https://github.com/lumine-code/open-with/issues"
+  },
+  "license": "MIT",
+  "main": "./lib/main",
+  "specPackages": [
+    "tree-view",
+    "open-external"
+  ],
+  "files": [
+    "keymaps",
+    "lib",
+    "menus",
+    "spec"
+  ],
+  "engines": {
+    "lumine": "^1.0.0"
+  },
+  "scripts": {
+    "test": "lumine --test spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "providedServices": {
+    "background-tips.provider": {
+      "versions": {
+        "1.0.0": "provideBackgroundTips"
+      }
+    }
+  },
+  "consumedServices": {
+    "tree-view.selection": {
+      "versions": {
+        "^1.0.0": "consumeTreeViewSelection"
+      }
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.4.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10"
+  }
+}

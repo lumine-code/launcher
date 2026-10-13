@@ -1,0 +1,24 @@
+{
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "Open With",
+          "submenu": [
+            { "label": "Toggle", "command": "open-with:toggle" },
+            { "label": "Open", "command": "open-with:open" },
+            { "label": "Open in New Window", "command": "open-with:new-window" },
+            { "label": "Open in Detached Window", "command": "open-with:detached-window" },
+            { "label": "Open in This Window", "command": "open-with:this-window" }
+          ]
+        }
+      ]
+    }
+  ],
+  "context-menu": {
+    ".tree-view .full-menu .entry:not(.tree-view-special-root)": [
+      { "label": "Open With…", "command": "open-with:toggle", "group": "opening", "order": 20 }
+    ]
+  }
+}
