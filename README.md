@@ -28,14 +28,14 @@ Commands available in `lumine-workspace`:
 
 Commands available in `.open-with .select-list`:
 
-- `open-with:open`: run the selected opener or system action in the current window,
+- `open-with:open`: run the selected file opener or system action in the current window,
 - `open-with:new-window`: use the selected opener in a new project window,
 - `open-with:detached-window`: use the selected opener in a detached editor window,
 - `open-with:this-window`: use the selected opener as the current window's project.
 
 ## Usage
 
-Choose Open With from a file or folder's tree context menu, or use the package menu for the active file. The picker marks the action that ordinary opening would use as Default. Window destinations are available only for actions that open editor content; external opening and showing a path in the file manager have no editor-window destination. Folders can open as projects in the current window or a new window. For files, Open uses the current project's active editor pane, while This Window replaces the project with the file's containing directory.
+Choose Open With from a file or folder's tree context menu, or use the package menu for the active file. The picker marks the action that ordinary opening would use as Default. Window destinations are available only for actions that open editor content; external opening and showing a path in the file manager have no editor-window destination. Folders open as projects in a new window by default, while This Window switches the current project to the folder. For files, Open uses the current project's active editor pane, while This Window replaces the project with the file's containing directory.
 
 ## Customization
 

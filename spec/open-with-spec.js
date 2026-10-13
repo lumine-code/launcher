@@ -132,6 +132,21 @@ describe("Open With", () => {
     return { click, result };
   }
 
+  async function confirmWithEnter(host) {
+    const list = host.getModel();
+    const input = list.getQueryEditor().getElement();
+    const [binding] = lumine.keymaps.findKeyBindings({ target: input, keystrokes: "enter" });
+    expect(binding.command).toBe("core:confirm");
+    let complete;
+    const finished = new Promise((resolve) => (complete = resolve));
+    const subscription = list.onDidFinishAction(complete);
+    lumine.commands.dispatch(input, binding.command);
+    const result = await finished;
+    subscription.dispose();
+    await flushMicrotasks();
+    return result;
+  }
+
   it("puts the actual default first and marks only that row", async () => {
     registerViewer();
     const host = await show();
@@ -354,6 +369,45 @@ describe("Open With", () => {
     expect(host.isDestroyed()).toBe(true);
   });
 
+  for (const confirmation of ["plain click", "Enter"]) {
+    it(`opens the folder project in one new window on ${confirmation}`, async () => {
+      selected = [folder];
+      const host = await show();
+      const result =
+        confirmation === "Enter"
+          ? await confirmWithEnter(host)
+          : (await clickChoice(host, "project-folder", {}, ".primary-text")).result;
+
+      expect(result.status).toBe("success");
+      expect(result.command).toBe("open-with:new-window");
+      expect(newWindow).toHaveBeenCalledOnceWith(folder, {
+        opener: "project-folder",
+        pathKind: "directory",
+        signal: result.signal,
+      });
+      expect(lumine.project.getPaths()).toEqual([]);
+      expect(detachedWindow).not.toHaveBeenCalled();
+      expect(lumine.shell.openPath).not.toHaveBeenCalled();
+      expect(host.isDestroyed()).toBe(true);
+    });
+  }
+
+  it("presents New Window as a folder's only primary action with Enter and This Window with Shift-Enter", async () => {
+    selected = [folder];
+    const host = await show();
+    const actions = host.getModel().getAvailableActions();
+
+    expect(actions.map(({ command }) => command)).toEqual([
+      "open-with:new-window",
+      "open-with:this-window",
+    ]);
+    const [newProject, currentProject] = actions;
+    expect(newProject.primary).toBe(true);
+    expect(newProject.keystrokes).toContain("enter");
+    expect(currentProject.primary).toBe(false);
+    expect(currentProject.keystrokes).toContain("shift-enter");
+  });
+
   it("keeps a file Shift-click opening the clicked opener in the current pane", async () => {
     const { viewer, open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
@@ -431,6 +485,30 @@ describe("Open With", () => {
       expect(showInFolder).not.toHaveBeenCalled();
       expect(newWindow).not.toHaveBeenCalled();
       expect(detachedWindow).not.toHaveBeenCalled();
+    });
+
+    it(`confirms a folder's ${id} as its own current action without opening a window`, async () => {
+      selected = [folder];
+      const open = spyOn(external, "openExternal").and.resolveTo("");
+      const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
+      const host = await show();
+      const list = host.getModel();
+      await list.selectItemById(id);
+      const actions = list.getAvailableActions();
+      expect(actions.map(({ command }) => command)).toEqual(["open-with:open"]);
+      expect(actions[0].primary).toBe(true);
+      expect(actions[0].keystrokes).toContain("enter");
+      const result = await confirmWithEnter(host);
+
+      expect(result.status).toBe("success");
+      expect(result.command).toBe("open-with:open");
+      const requested = id === "open-external" ? open : showInFolder;
+      const other = id === "open-external" ? showInFolder : open;
+      expect(requested).toHaveBeenCalledOnceWith(folder);
+      expect(other).not.toHaveBeenCalled();
+      expect(newWindow).not.toHaveBeenCalled();
+      expect(detachedWindow).not.toHaveBeenCalled();
+      expect(lumine.project.getPaths()).toEqual([]);
     });
   }
 
@@ -527,7 +605,7 @@ describe("Open With", () => {
     });
   }
 
-  it("offers a folder project as the default with current and new-window actions only", async () => {
+  it("offers a folder project as the default with distinct current and new-window actions", async () => {
     selected = [folder];
     const host = await show();
     const list = host.getModel();
@@ -543,12 +621,13 @@ describe("Open With", () => {
       isDefault: true,
       destinations: ["current", "new-window"],
     });
-    expect(actionNames(list)).toContain("open-with:open");
+    expect(actionNames(list)).not.toContain("open-with:open");
+    expect(actionNames(list)).toContain("open-with:this-window");
     expect(actionNames(list)).toContain("open-with:new-window");
     expect(actionNames(list)).not.toContain("open-with:detached-window");
     expect((await list.runAction("open-with:detached-window")).status).toBe("unavailable");
     expect(detachedWindow).not.toHaveBeenCalled();
-    expect((await list.runAction("open-with:open")).status).toBe("success");
+    expect((await list.runAction("open-with:this-window")).status).toBe("success");
     expect(lumine.project.getPaths()).toEqual([folder]);
     expect(lumine.workspace.getTextEditors().some((editor) => editor.getPath() === folder)).toBe(
       false,
@@ -646,13 +725,20 @@ describe("Open With", () => {
     const host = await show();
     const input = host.getModel().getQueryEditor().getElement();
     for (const [keystrokes, command] of [
-      ["enter", "open-with:open"],
+      ["enter", "core:confirm"],
       ["ctrl-enter", "open-with:new-window"],
       ["alt-enter", "open-with:detached-window"],
     ]) {
       const matches = lumine.keymaps.findKeyBindings({ target: input, keystrokes });
       expect(matches[0]?.command).toBe(command);
     }
+    const primary = host
+      .getModel()
+      .getAvailableActions()
+      .filter((action) => action.primary);
+    expect(primary.length).toBe(1);
+    expect(primary[0].command).toBe("open-with:open");
+    expect(primary[0].keystrokes).toContain("enter");
   });
 
   it("uses the active saved item outside the tree view", async () => {
