@@ -2,8 +2,6 @@
 
 Choose how and where to open files and folders.
 
-Fork of [tree-view](https://github.com/lumine-code/tree-view) (opening actions).
-
 ## Features
 
 - **File actions**: choose an available file opener, with the default first and the text editor always available.

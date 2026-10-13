@@ -107,6 +107,31 @@ describe("Open With", () => {
     return { window, pane };
   }
 
+  function choiceRow(list, id) {
+    const index = list.getDisplayedItems().findIndex((choice) => choice.id === id);
+    return list.getElement().querySelectorAll('[role="option"]')[index];
+  }
+
+  async function clickChoice(host, id, modifiers = {}, selector) {
+    const list = host.getModel();
+    const row = choiceRow(list, id);
+    const target = selector ? row.querySelector(selector) : row;
+    let complete;
+    const finished = new Promise((resolve) => (complete = resolve));
+    const subscription = list.onDidFinishAction(complete);
+    const click = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ...modifiers,
+    });
+    target.dispatchEvent(click);
+    const result = await finished;
+    subscription.dispose();
+    await flushMicrotasks();
+    return { click, result };
+  }
+
   it("puts the actual default first and marks only that row", async () => {
     registerViewer();
     const host = await show();
@@ -219,6 +244,246 @@ describe("Open With", () => {
     expect(result.status).toBe("success");
     expect(pane.getItems()[0].getText()).toBe("first document\n");
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it("keeps a plain click on a label opening the clicked opener in the current pane", async () => {
+    const { viewer, open } = registerViewer({ isDefaultEligible: () => false });
+    const host = await show();
+    const originalPane = lumine.workspace.getMainWindow().getEditorContainer().getActivePane();
+    expect(host.getModel().getSelectedItem().id).toBe("text-editor");
+    const { result } = await clickChoice(host, "open-with:spec-viewer", {}, ".primary-text");
+
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:open");
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(originalPane.getItems()).toContain(viewer);
+    expect(newWindow).not.toHaveBeenCalled();
+    expect(detachedWindow).not.toHaveBeenCalled();
+    expect(host.isDestroyed()).toBe(true);
+  });
+
+  it("opens a nonselected nondefault opener exactly once on Ctrl-click", async () => {
+    const { open } = registerViewer({ isDefaultEligible: () => false });
+    const host = await show();
+    expect(host.getModel().getSelectedItem().id).toBe("text-editor");
+    const { click, result } = await clickChoice(host, "open-with:spec-viewer", { ctrlKey: true });
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:new-window");
+    expect(newWindow).toHaveBeenCalledOnceWith(file, {
+      opener: "open-with:spec-viewer",
+      pathKind: "file",
+      signal: result.signal,
+    });
+    expect(open).not.toHaveBeenCalled();
+    expect(detachedWindow).not.toHaveBeenCalled();
+    expect(lumine.workspace.getPaneItems()).toEqual([]);
+  });
+
+  it("Alt-clicks Text Editor into one detached pane while another viewer is default", async () => {
+    const { open } = registerViewer();
+    const { pane, window } = hiddenEditorWindow();
+    const host = await show();
+    expect(host.getModel().getSelectedItem().id).toBe("open-with:spec-viewer");
+    const { result } = await clickChoice(host, "text-editor", { altKey: true }, ".primary-text");
+
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:detached-window");
+    expect(detachedWindow).toHaveBeenCalledOnceWith({ show: false });
+    expect(pane.getItems().length).toBe(1);
+    expect(pane.getItems()[0].getPath()).toBe(file);
+    expect(pane.getItems()[0].getText()).toBe("first document\n");
+    expect(window.show).toHaveBeenCalledTimes(1);
+    expect(window.focus).toHaveBeenCalledTimes(1);
+    expect(open).not.toHaveBeenCalled();
+    expect(newWindow).not.toHaveBeenCalled();
+  });
+
+  it("prefers the detached destination when Alt and Ctrl are held together", async () => {
+    const host = await show();
+    const execute = spyOn(main, "execute").and.resolveTo();
+    const { result } = await clickChoice(host, "text-editor", { altKey: true, ctrlKey: true });
+
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:detached-window");
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.calls.mostRecent().args[2]).toBe("detached-window");
+  });
+
+  it("keeps a folder Alt-click unavailable and opens its project only on Ctrl-click", async () => {
+    selected = [folder];
+    const host = await show();
+    const unsupported = await clickChoice(host, "project-folder", { altKey: true });
+
+    expect(unsupported.result.status).toBe("unavailable");
+    expect(unsupported.result.command).toBe("open-with:detached-window");
+    expect(host.isVisible()).toBe(true);
+    expect(lumine.project.getPaths()).toEqual([]);
+    expect(newWindow).not.toHaveBeenCalled();
+    expect(detachedWindow).not.toHaveBeenCalled();
+    const { result } = await clickChoice(host, "project-folder", { ctrlKey: true });
+    expect(result.status).toBe("success");
+    expect(newWindow).toHaveBeenCalledOnceWith(folder, {
+      opener: "project-folder",
+      pathKind: "directory",
+      signal: result.signal,
+    });
+    expect(lumine.project.getPaths()).toEqual([]);
+    expect(detachedWindow).not.toHaveBeenCalled();
+  });
+
+  it("opens a folder project in the current window on Shift-click", async () => {
+    selected = [folder];
+    const host = await show();
+    await host.getModel().selectItemById("open-external");
+    const { click, result } = await clickChoice(
+      host,
+      "project-folder",
+      { shiftKey: true },
+      ".badge",
+    );
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:this-window");
+    expect(lumine.project.getPaths()).toEqual([folder]);
+    expect(newWindow).not.toHaveBeenCalled();
+    expect(detachedWindow).not.toHaveBeenCalled();
+    expect(lumine.shell.openPath).not.toHaveBeenCalled();
+    expect(host.isDestroyed()).toBe(true);
+  });
+
+  it("keeps a file Shift-click opening the clicked opener in the current pane", async () => {
+    const { viewer, open } = registerViewer({ isDefaultEligible: () => false });
+    const host = await show();
+    const { result } = await clickChoice(
+      host,
+      "open-with:spec-viewer",
+      { shiftKey: true },
+      ".primary-text",
+    );
+
+    expect(result.status).toBe("success");
+    expect(result.command).toBe("open-with:open");
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(lumine.workspace.paneForItem(viewer)).toBeDefined();
+    expect(lumine.project.getPaths()).toEqual([]);
+    expect(newWindow).not.toHaveBeenCalled();
+    expect(detachedWindow).not.toHaveBeenCalled();
+  });
+
+  it("resolves Shift-Enter as This Window only while choosing a folder opener", async () => {
+    const fileHost = await show();
+    const fileInput = fileHost.getModel().getQueryEditor().getElement();
+    const fileBindings = lumine.keymaps.findKeyBindings({
+      target: fileInput,
+      keystrokes: "shift-enter",
+    });
+    expect(fileBindings.some((binding) => binding.command === "open-with:this-window")).toBe(false);
+    fileHost.cancel();
+    await fileHost.destroy();
+    selected = [folder];
+    const folderHost = await show();
+    const folderInput = folderHost.getModel().getQueryEditor().getElement();
+    const folderBindings = lumine.keymaps.findKeyBindings({
+      target: folderInput,
+      keystrokes: "shift-enter",
+    });
+
+    expect(folderBindings[0]?.command).toBe("open-with:this-window");
+  });
+
+  for (const id of ["open-external", "open-external:show"]) {
+    it(`does not fall back to the primary action for Ctrl-click or Alt-click on ${id}`, async () => {
+      const open = spyOn(external, "openExternal").and.resolveTo("");
+      const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
+      const host = await show();
+      for (const modifiers of [{ ctrlKey: true }, { altKey: true }]) {
+        const { click, result } = await clickChoice(host, id, modifiers, ".primary-text");
+        expect(click.defaultPrevented).toBe(true);
+        expect(result.status).toBe("unavailable");
+        expect(host.isVisible()).toBe(true);
+        expect(host.getModel().getSelectedItem().id).toBe(id);
+      }
+
+      expect(open).not.toHaveBeenCalled();
+      expect(showInFolder).not.toHaveBeenCalled();
+      expect(newWindow).not.toHaveBeenCalled();
+      expect(detachedWindow).not.toHaveBeenCalled();
+      expect(lumine.workspace.getPaneItems()).toEqual([]);
+    });
+
+    it(`keeps a folder Shift-click on ${id} unavailable without running the primary action`, async () => {
+      selected = [folder];
+      const open = spyOn(external, "openExternal").and.resolveTo("");
+      const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
+      const host = await show();
+      const { click, result } = await clickChoice(host, id, { shiftKey: true }, ".primary-text");
+
+      expect(click.defaultPrevented).toBe(true);
+      expect(result.status).toBe("unavailable");
+      expect(result.command).toBe("open-with:this-window");
+      expect(host.isVisible()).toBe(true);
+      expect(host.getModel().getSelectedItem().id).toBe(id);
+      expect(lumine.project.getPaths()).toEqual([]);
+      expect(open).not.toHaveBeenCalled();
+      expect(showInFolder).not.toHaveBeenCalled();
+      expect(newWindow).not.toHaveBeenCalled();
+      expect(detachedWindow).not.toHaveBeenCalled();
+    });
+  }
+
+  it("handles a filtered badge click and removes modifier listeners from rerendered and destroyed rows", async () => {
+    registerViewer();
+    const host = await show();
+    const list = host.getModel();
+    const retiredRow = choiceRow(list, "open-with:spec-viewer");
+    const dispatch = spyOn(lumine.commands, "dispatch").and.callThrough();
+    await list.setQuery("document");
+    const currentRow = choiceRow(list, "open-with:spec-viewer");
+    expect(currentRow).not.toBe(retiredRow);
+    expect(currentRow.querySelector(".character-match")).not.toBeNull();
+    const retiredClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true,
+    });
+    retiredRow.querySelector(".badge").dispatchEvent(retiredClick);
+    await flushMicrotasks();
+
+    expect(retiredClick.defaultPrevented).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
+    const { result } = await clickChoice(
+      host,
+      "open-with:spec-viewer",
+      { ctrlKey: true },
+      ".badge",
+    );
+    expect(result.status).toBe("success");
+    expect(newWindow).toHaveBeenCalledTimes(1);
+    expect(dispatch.calls.first().args[0]).toBe(list.getElement());
+    expect(dispatch.calls.first().args[1]).toBe("open-with:new-window");
+    expect(host.isDestroyed()).toBe(true);
+    const cancelledHost = await show();
+    const destroyedRow = choiceRow(cancelledHost.getModel(), "open-with:spec-viewer");
+    cancelledHost.cancel();
+    await cancelledHost.destroy();
+    expect(cancelledHost.isDestroyed()).toBe(true);
+    const callCount = dispatch.calls.count();
+    const destroyedClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      altKey: true,
+    });
+    destroyedRow.querySelector(".badge").dispatchEvent(destroyedClick);
+    await flushMicrotasks();
+
+    expect(destroyedClick.defaultPrevented).toBe(false);
+    expect(dispatch.calls.count()).toBe(callCount);
+    expect(detachedWindow).not.toHaveBeenCalled();
   });
 
   it("replaces the current project with the selected file's parent before opening its viewer", async () => {

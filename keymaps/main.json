@@ -8,5 +8,11 @@
     "enter": "open-with:open",
     "ctrl-enter": "open-with:new-window",
     "alt-enter": "open-with:detached-window"
+  },
+  ".open-with.directory .select-list": {
+    "shift-enter": "open-with:this-window"
+  },
+  ".open-with.directory .select-list lumine-text-editor[mini]": {
+    "shift-enter": "open-with:this-window"
   }
 }
