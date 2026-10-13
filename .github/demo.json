@@ -1,0 +1,17 @@
+{
+  "title": "open-with",
+  "description": "Choose a registered opener for a Markdown file, with the default editor identified.",
+  "recordedOn": "2026-10-14",
+  "sourceRevision": "7b306b18722cf65833ff418b8d5410a3c0052fd3",
+  "mode": "normal",
+  "fontSettings": "default",
+  "themeSourceRevision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
+  "images": [
+    {
+      "file": "demo.png",
+      "label": "Choose a registered opener for a Markdown file, with the default editor identified.",
+      "width": 1100,
+      "height": 620
+    }
+  ]
+}

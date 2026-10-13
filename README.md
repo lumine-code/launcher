@@ -12,6 +12,8 @@ Fork of [tree-view](https://github.com/lumine-code/tree-view) (opening actions).
 - **System actions**: open a path externally or reveal it in the system file manager.
 - **Direct commands**: use the default opener without showing the picker.
 
+![Choose a registered opener for a Markdown file, with the default editor identified.](.github/demo.png)
+
 ## Installation
 
 To install `open-with` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/open-with`.
