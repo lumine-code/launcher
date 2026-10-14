@@ -2,7 +2,7 @@
   "title": "open-with",
   "description": "Choose a registered opener for a Markdown file, with the default editor identified.",
   "recordedOn": "2026-10-14",
-  "sourceRevision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
+  "sourceRevision": "f0e3b575c92be1d588124769638c0916a7ba185f",
   "themeSourceRevision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
   "mode": "normal",
   "fontSettings": "default",
@@ -23,34 +23,34 @@
   "cornerRadius": 10,
   "sources": {
     "editor": {
-      "revision": "b5a8faec3ddaa8afb89b6e46f9e7739baecae91b",
+      "revision": "385bd1b3ac2db600f1c7e077474d9da4d6deebc4",
       "dirty": true,
-      "workingTreeHash": "056fdbeec067f3ed2be83b01f2b7eb42efb19dce777b9b9ef7288c62ff4af80d"
+      "workingTreeHash": "08ba420fdc2c3d9a27ae9973c15f1efb7ccd57a582986958a8f1049bc8f34d60"
     },
     "package": {
-      "revision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
-      "dirty": false,
-      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      "revision": "f0e3b575c92be1d588124769638c0916a7ba185f",
+      "dirty": true,
+      "workingTreeHash": "25f71384c6240c4a71b309755b7aa72fcdb6178881c23dc62884b188e028c470"
     },
     "open-with": {
-      "revision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
-      "dirty": false,
-      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      "revision": "f0e3b575c92be1d588124769638c0916a7ba185f",
+      "dirty": true,
+      "workingTreeHash": "25f71384c6240c4a71b309755b7aa72fcdb6178881c23dc62884b188e028c470"
     },
     "language-gfm": {
       "revision": "0b7435801aa225105de22053951b9daf9aefe1a1",
-      "dirty": false,
-      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      "dirty": true,
+      "workingTreeHash": "366b221660f7d28f3a9f4cd9085212df229a51840037b47a40b93d8319bbacb6"
     },
     "markdown-preview": {
-      "revision": "1499d8e33ff3875f63f735cac432f581b2ee9fbd",
-      "dirty": false,
-      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      "revision": "afc2412c0b225b0729627365f35a2c013f70837a",
+      "dirty": true,
+      "workingTreeHash": "33b6ff1002d673fe83aefcb0b2e4fb14f882e3fe73a0bb751058375e85c349a8"
     },
     "one-theme": {
       "revision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
-      "dirty": false,
-      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      "dirty": true,
+      "workingTreeHash": "50ec2f83a6347dd8113870992ec4eb2be4014f3d9e12213c2f51b543f1eca793"
     }
   },
   "fixtures": [
@@ -65,7 +65,7 @@
       "label": "Choose a registered opener for a Markdown file, with the default editor identified.",
       "width": 1100,
       "height": 620,
-      "sha256": "bf46d0e1b5cb2b8de544e7342232354941bcab15ffd00c33dcd196d9afbcaefe"
+      "sha256": "5a03a0da632857a679f8c3d860656b70d065131291db4f90e9edb09cfb50cadf"
     }
   ]
 }
