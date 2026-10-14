@@ -869,6 +869,70 @@ describe("Open With", () => {
     expect(lumine.application.openWindow).not.toHaveBeenCalled();
   });
 
+  for (const opener of ["open-external", "open-external:show"]) {
+    it(`finishes each project root before dispatching the next ${opener} action`, async () => {
+      const secondFolder = path.join(scratch, "another-project");
+      fs.mkdirSync(secondFolder);
+      const context = await main.resolveContext({
+        target: row,
+        detail: { project: { paths: [folder, secondFolder] } },
+      });
+      let release, started;
+      const first = new Promise((resolve) => (release = resolve));
+      const began = new Promise((resolve) => (started = resolve));
+      const open = spyOn(lumine.workspace, "open").and.callFake((uri) => {
+        if (uri === folder) {
+          started();
+          return first;
+        }
+        return Promise.resolve("second result");
+      });
+      const pending = main.execute(context, { id: opener }, "current");
+      await began;
+      expect(open.calls.allArgs().map(([uri]) => uri)).toEqual([folder]);
+      release("first result");
+      expect(await pending).toEqual(["first result", "second result"]);
+      expect(open.calls.allArgs().map(([uri]) => uri)).toEqual([folder, secondFolder]);
+    });
+  }
+
+  for (const retirement of ["cancellation", "deactivation", "window closure"]) {
+    it(`does not dispatch another project root after ${retirement} during the first action`, async () => {
+      const secondFolder = path.join(scratch, "another-project");
+      fs.mkdirSync(secondFolder);
+      const context = await main.resolveContext({
+        target: row,
+        detail: { project: { paths: [folder, secondFolder] } },
+      });
+      let release, started;
+      const first = new Promise((resolve) => (release = resolve));
+      const began = new Promise((resolve) => (started = resolve));
+      const open = spyOn(lumine.workspace, "open").and.callFake((uri) => {
+        if (uri === folder) {
+          started();
+          return first;
+        }
+        return Promise.resolve();
+      });
+      const controller = new AbortController();
+      const pending = main
+        .execute(context, { id: "open-external:show" }, "current", controller.signal)
+        .then(
+          (value) => ({ value }),
+          (error) => ({ error }),
+        );
+      await began;
+      if (retirement === "cancellation") controller.abort();
+      else if (retirement === "deactivation") await lumine.packages.deactivatePackage("open-with");
+      else spyOn(context.window, "isDestroyed").and.returnValue(true);
+      release();
+      const result = await pending;
+      if (retirement === "cancellation") expect(result.error?.name).toBe("AbortError");
+      else expect(result.value).toBeUndefined();
+      expect(open.calls.allArgs().map(([uri]) => uri)).toEqual([folder]);
+    });
+  }
+
   it("refuses an incomplete project without partially replacing the current project", async () => {
     const host = await main.toggle({
       target: row,
