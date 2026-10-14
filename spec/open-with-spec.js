@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const fsPromises = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 const { CompositeDisposable } = require("lumine");
 
 describe("Open With", () => {
@@ -748,6 +749,126 @@ describe("Open With", () => {
     await host.getModel().runAction("open-with:open");
 
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
+  });
+
+  it("opens an explicit selected path in the captured pane and preserves its cursor position", async () => {
+    const original = lumine.workspace.getActivePane();
+    const another = original.splitRight();
+    another.activate();
+    const host = await main.toggle({
+      target: lumine.workspace.getElement(),
+      detail: { path: file, pane: original, initialLine: 0, initialColumn: 3 },
+    });
+    await host.getModel().runAction("open-with:open");
+
+    const editor = original.getItems().find((item) => item.getPath?.() === file);
+    expect(editor.getCursorBufferPosition().toArray()).toEqual([0, 3]);
+    expect(another.getItems()).toEqual([]);
+  });
+
+  it("normalizes an explicit file URL and carries its fragment to the selected viewer", async () => {
+    const { open } = registerViewer();
+    const uri = pathToFileURL(file);
+    uri.hash = "nameddest=GROUP";
+    const host = await main.toggle({ target: row, detail: { path: uri.href } });
+    await host.getModel().runAction("open-with:open");
+
+    expect(open.calls.mostRecent().args[0]).toBe(file);
+    expect(open.calls.mostRecent().args[1].uriFragment).toBe("#nameddest=GROUP");
+  });
+
+  it("carries explicit viewer positions and fragments when requesting a new window", async () => {
+    const host = await main.toggle({
+      target: row,
+      detail: { path: file, initialLine: 12, initialColumn: 3, uriFragment: "#nameddest=GROUP" },
+    });
+    await host.getModel().runAction("open-with:new-window");
+
+    expect(newWindow.calls.mostRecent().args[1]).toEqual(
+      jasmine.objectContaining({
+        opener: "text-editor",
+        initialLine: 12,
+        initialColumn: 3,
+        uriFragment: "#nameddest=GROUP",
+      }),
+    );
+  });
+
+  it("preserves every project folder and launch mode in a new project window", async () => {
+    const secondFolder = path.join(scratch, "another-project");
+    fs.mkdirSync(secondFolder);
+    const host = await main.toggle({
+      target: row,
+      detail: { project: { paths: [folder, secondFolder], devMode: true, safeMode: true } },
+    });
+    const list = host.getModel();
+    expect(list.getItems().map(({ id }) => id)).toEqual([
+      "project-folder",
+      "open-external",
+      "open-external:show",
+    ]);
+    await list.runAction("open-with:new-window");
+
+    expect(lumine.application.openWindow).toHaveBeenCalledOnceWith({
+      pathsToOpen: [folder, secondFolder],
+      devMode: true,
+      safeMode: true,
+      newWindow: true,
+      reuseEmptyWindow: false,
+    });
+    expect(newWindow).not.toHaveBeenCalled();
+    expect(lumine.project.getPaths()).toEqual([]);
+  });
+
+  it("restores all project folders in this window and reveals all roots through the system action", async () => {
+    const secondFolder = path.join(scratch, "another-project");
+    fs.mkdirSync(secondFolder);
+    const target = { target: row, detail: { project: { paths: [folder, secondFolder] } } };
+    let host = await main.toggle(target);
+    await host.getModel().runAction("open-with:this-window");
+    expect(lumine.project.getPaths()).toEqual([folder, secondFolder]);
+
+    host = await main.toggle(target);
+    await host.getModel().selectItemById("open-external:show");
+    await host.getModel().runAction("open-with:open");
+    expect(lumine.shell.showItemInFolder.calls.allArgs()).toEqual([[folder], [secondFolder]]);
+    expect(lumine.application.openWindow).not.toHaveBeenCalled();
+  });
+
+  it("refuses an incomplete project without partially replacing the current project", async () => {
+    const host = await main.toggle({
+      target: row,
+      detail: { project: { paths: [folder, path.join(scratch, "missing")] } },
+    });
+
+    expect(host).toBeUndefined();
+    expect(lumine.project.getPaths()).toEqual([]);
+    expect(lumine.application.openWindow).not.toHaveBeenCalled();
+  });
+
+  it("resolves Alt-Enter on the tree view to the shared chooser", () => {
+    const bindings = lumine.keymaps.findKeyBindings({ target: row, keystrokes: "alt-enter" });
+    expect(bindings[0]?.command).toBe("open-with:toggle");
+  });
+
+  it("keeps the chooser alive when a suspended action menu reports an opener failure", async () => {
+    const { open } = registerViewer();
+    open.and.rejectWith(new Error("The viewer failed to open"));
+    const host = await show();
+    await host.showActions();
+    const actions = lumine.workspace
+      .getModalPanels()
+      .find((panel) => panel.isVisible())
+      .getItem();
+    await actions.selectItemById("open-with:open");
+    await expectAsync(actions.confirmSelection()).toBeRejectedWithError(
+      "The viewer failed to open",
+    );
+    await flushMicrotasks();
+
+    expect(host.isDestroyed()).toBe(false);
+    expect(host.getModel().getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(lumine.workspace.getPaneItems()).toEqual([]);
   });
 
   it("warns for unsaved items or a multiple tree selection while an absent surface stays silent", async () => {

@@ -1,4 +1,7 @@
 {
+  ".tree-view": {
+    "alt-enter": "open-with:toggle"
+  },
   ".open-with .select-list": {
     "enter": "core:confirm",
     "ctrl-enter": "open-with:new-window",

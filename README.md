@@ -37,6 +37,19 @@ Commands available in `.open-with .select-list`:
 
 Choose Open With from a file or folder's tree context menu, or use the package menu for the active file. The picker marks the action that ordinary opening would use as Default. Window destinations are available only for actions that open editor content; external opening and showing a path in the file manager have no editor-window destination. Folders open as projects in a new window by default, while This Window switches the current project to the folder. For files, Open uses the current project's active editor pane, while This Window replaces the project with the file's containing directory.
 
+Other packages can open the chooser for an explicit local path or file URL by dispatching `open-with:toggle` with command detail. Capture the initiating pane before asynchronous work; optional `initialLine` and `initialColumn` are zero-based, and `uriFragment` preserves a viewer destination such as `#nameddest=GROUP`.
+
+```js
+await lumine.commands.dispatch(element, "open-with:toggle", {
+  path: filePath,
+  pane,
+  initialLine: 12,
+  initialColumn: 3,
+});
+```
+
+For a project, pass `project: { paths, devMode, safeMode }` instead of `path`. The chooser preserves the complete folder set and requested launch modes. System actions apply to every project folder.
+
 ## Customization
 
 Adjust the picker width and badges in your `styles.css`:
