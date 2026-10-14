@@ -329,15 +329,29 @@ describe("Open With", () => {
     expect(newWindow).not.toHaveBeenCalled();
   });
 
-  it("prefers the detached destination when Alt and Ctrl are held together", async () => {
+  it("only selects the opener when Alt and Ctrl are held without an Enter binding", async () => {
+    registerViewer();
     const host = await show();
+    const list = host.getModel();
+    expect(list.getSelectedItem().id).toBe("open-with:spec-viewer");
     const execute = spyOn(main, "execute").and.resolveTo();
-    const { result } = await clickChoice(host, "text-editor", { altKey: true, ctrlKey: true });
+    const action = jasmine.createSpy("finished action");
+    leases.add(list.onDidFinishAction(action));
+    const click = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      altKey: true,
+      ctrlKey: true,
+    });
+    choiceRow(list, "text-editor").dispatchEvent(click);
+    await flushMicrotasks();
 
-    expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:detached-window");
-    expect(execute).toHaveBeenCalledTimes(1);
-    expect(execute.calls.mostRecent().args[2]).toBe("detached-window");
+    expect(click.defaultPrevented).toBe(true);
+    expect(list.getSelectedItem().id).toBe("text-editor");
+    expect(action).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(host.isVisible()).toBe(true);
   });
 
   it("keeps a folder Alt-click unavailable and opens its project only on Ctrl-click", async () => {
@@ -422,23 +436,30 @@ describe("Open With", () => {
     expect(currentProject.keystrokes).toContain("shift-enter");
   });
 
-  it("keeps a file Shift-click opening the clicked opener in the current pane", async () => {
+  it("only selects a file opener on Shift-click without a Shift-Enter binding", async () => {
     const { viewer, open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
-    const { result } = await clickChoice(
-      host,
-      "open-with:spec-viewer",
-      { shiftKey: true },
-      ".primary-text",
-    );
+    const list = host.getModel();
+    const action = jasmine.createSpy("finished action");
+    leases.add(list.onDidFinishAction(action));
+    const click = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      shiftKey: true,
+    });
+    choiceRow(list, "open-with:spec-viewer").querySelector(".primary-text").dispatchEvent(click);
+    await flushMicrotasks();
 
-    expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:open");
-    expect(open).toHaveBeenCalledTimes(1);
-    expect(lumine.workspace.paneForItem(viewer)).toBeDefined();
+    expect(click.defaultPrevented).toBe(true);
+    expect(list.getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(action).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+    expect(lumine.workspace.paneForItem(viewer)).toBeUndefined();
     expect(lumine.project.getPaths()).toEqual([]);
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
+    expect(host.isVisible()).toBe(true);
   });
 
   it("resolves Shift-Enter as This Window only while choosing a folder opener", async () => {
