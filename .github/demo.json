@@ -2,16 +2,70 @@
   "title": "open-with",
   "description": "Choose a registered opener for a Markdown file, with the default editor identified.",
   "recordedOn": "2026-10-14",
-  "sourceRevision": "7b306b18722cf65833ff418b8d5410a3c0052fd3",
+  "sourceRevision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
+  "themeSourceRevision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
   "mode": "normal",
   "fontSettings": "default",
-  "themeSourceRevision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
+  "scenario": "demo.js",
+  "recipeHash": "54fc530983a05a86618573f6f83767becfcac67b5e7d6f95ce72871ee5223524",
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "electron": "44.7.0",
+    "chrome": "152.0.7977.130",
+    "devicePixelRatio": 1,
+    "locale": "en-GB",
+    "fontFamily": "Fira Code, Menlo, DejaVu Sans Mono, Consolas, monospace",
+    "fontSize": 14,
+    "themes": ["one-day-syntax", "one-day-ui"]
+  },
+  "viewport": { "width": 1100, "height": 620 },
+  "cornerRadius": 10,
+  "sources": {
+    "editor": {
+      "revision": "b5a8faec3ddaa8afb89b6e46f9e7739baecae91b",
+      "dirty": true,
+      "workingTreeHash": "056fdbeec067f3ed2be83b01f2b7eb42efb19dce777b9b9ef7288c62ff4af80d"
+    },
+    "package": {
+      "revision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "open-with": {
+      "revision": "8743cd930b85ed6f7778f10a1fa7b4db3e7fbaef",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "language-gfm": {
+      "revision": "0b7435801aa225105de22053951b9daf9aefe1a1",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "markdown-preview": {
+      "revision": "1499d8e33ff3875f63f735cac432f581b2ee9fbd",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "one-theme": {
+      "revision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "fixtures": [
+    {
+      "file": "README.md",
+      "sha256": "089ad655123e2e6f0681b6d735c515a1c0e78002c01f4ed68dad2c437d1a33e8"
+    }
+  ],
   "images": [
     {
       "file": "demo.png",
       "label": "Choose a registered opener for a Markdown file, with the default editor identified.",
       "width": 1100,
-      "height": 620
+      "height": 620,
+      "sha256": "bf46d0e1b5cb2b8de544e7342232354941bcab15ffd00c33dcd196d9afbcaefe"
     }
   ]
 }
