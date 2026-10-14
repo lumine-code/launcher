@@ -203,6 +203,19 @@ describe("Open With", () => {
     expect(detachedWindow).not.toHaveBeenCalled();
   });
 
+  for (const allowPending of [true, false]) {
+    it(`respects pending configuration ${allowPending} for default opening`, async () => {
+      lumine.config.set("core.allowPendingPaneItems", allowPending);
+      await main.openDefault(event());
+      const pane = lumine.workspace.getMainWindow().getEditorContainer().getActivePane();
+      const editor = pane.getItems().find((item) => item.getPath?.() === file);
+
+      expect(editor).toBeDefined();
+      expect(pane.getPendingItem() === editor).toBe(allowPending);
+      expect(lumine.config.get("core.allowPendingPaneItems")).toBe(allowPending);
+    });
+  }
+
   it("opens the selected viewer in an independent project window", async () => {
     const { open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
