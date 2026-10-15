@@ -10,6 +10,10 @@ Create workspace content and choose how and where to open resources.
 - **Project and system actions**: open folders as projects, open resources externally, or reveal them in the system file manager.
 - **Extensible providers**: packages contribute new content through a disposable service contract.
 
+![Choose how to open a Markdown file, with the default editor identified.](.github/demo.png)
+
+![Create text, notebook, terminal, or Graviss content in the editor area.](.github/demo-new.png)
+
 ## Installation
 
 To install `launcher` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/launcher`.

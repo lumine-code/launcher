@@ -1,18 +1,18 @@
 {
-  "title": "open-with",
-  "description": "Choose a registered opener for a Markdown file, with the default editor identified.",
-  "recordedOn": "2026-10-14",
-  "sourceRevision": "f0e3b575c92be1d588124769638c0916a7ba185f",
-  "themeSourceRevision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
+  "title": "launcher",
+  "description": "Choose how to open a Markdown file, with the default editor identified.",
+  "recordedOn": "2026-10-15",
+  "sourceRevision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
+  "themeSourceRevision": "828c35ac1816466699effa6f7cf7eedccc930ff9",
   "mode": "normal",
   "fontSettings": "default",
   "scenario": "demo.js",
-  "recipeHash": "54fc530983a05a86618573f6f83767becfcac67b5e7d6f95ce72871ee5223524",
+  "recipeHash": "5177b96fbabc45c4304c18fa938e6adc24983ea8e5931227e8dad53b51e1456b",
   "environment": {
     "platform": "win32",
     "arch": "x64",
-    "electron": "44.7.0",
-    "chrome": "152.0.7977.130",
+    "electron": "44.7.1",
+    "chrome": "152.0.7977.149",
     "devicePixelRatio": 1,
     "locale": "en-GB",
     "fontFamily": "Fira Code, Menlo, DejaVu Sans Mono, Consolas, monospace",
@@ -21,51 +21,74 @@
   },
   "viewport": { "width": 1100, "height": 620 },
   "cornerRadius": 10,
+  "privacy": { "version": 1, "location": "neutral", "textChecked": true },
   "sources": {
     "editor": {
-      "revision": "385bd1b3ac2db600f1c7e077474d9da4d6deebc4",
-      "dirty": true,
-      "workingTreeHash": "08ba420fdc2c3d9a27ae9973c15f1efb7ccd57a582986958a8f1049bc8f34d60"
+      "revision": "23b7721a75e694c6c2961b2d4953d681c25410ca",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "package": {
-      "revision": "f0e3b575c92be1d588124769638c0916a7ba185f",
-      "dirty": true,
-      "workingTreeHash": "25f71384c6240c4a71b309755b7aa72fcdb6178881c23dc62884b188e028c470"
+      "revision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
-    "open-with": {
-      "revision": "f0e3b575c92be1d588124769638c0916a7ba185f",
-      "dirty": true,
-      "workingTreeHash": "25f71384c6240c4a71b309755b7aa72fcdb6178881c23dc62884b188e028c470"
+    "launcher": {
+      "revision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "graviss": {
+      "revision": "317f45e30b875de464f298a4199de65d63528586",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "jupyter-view": {
+      "revision": "8035c0eafae4b2b129162817a91031c649229d6c",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "language-gfm": {
-      "revision": "0b7435801aa225105de22053951b9daf9aefe1a1",
-      "dirty": true,
-      "workingTreeHash": "366b221660f7d28f3a9f4cd9085212df229a51840037b47a40b93d8319bbacb6"
+      "revision": "fb2a7dbc611e6397fd6e27a3651e03af08457ac2",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "markdown-preview": {
-      "revision": "afc2412c0b225b0729627365f35a2c013f70837a",
-      "dirty": true,
-      "workingTreeHash": "33b6ff1002d673fe83aefcb0b2e4fb14f882e3fe73a0bb751058375e85c349a8"
+      "revision": "9774b5c0435f647127bc9ccb81fca7086ffdc456",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "one-theme": {
-      "revision": "14a69683b0e3238e2bc128fbfae3866c1e4ee9c6",
-      "dirty": true,
-      "workingTreeHash": "50ec2f83a6347dd8113870992ec4eb2be4014f3d9e12213c2f51b543f1eca793"
+      "revision": "828c35ac1816466699effa6f7cf7eedccc930ff9",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "terminal": {
+      "revision": "81263b5025075105341ca2831bb341048563d641",
+      "dirty": false,
+      "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     }
   },
   "fixtures": [
     {
       "file": "README.md",
-      "sha256": "089ad655123e2e6f0681b6d735c515a1c0e78002c01f4ed68dad2c437d1a33e8"
+      "sha256": "e0110f28df1161b2b518a5d34e4cbcaa34c6da20af4652f671d8ba05c6797e80"
     }
   ],
   "images": [
     {
       "file": "demo.png",
-      "label": "Choose a registered opener for a Markdown file, with the default editor identified.",
+      "label": "Choose how to open a Markdown file, with the default editor identified.",
       "width": 1100,
       "height": 620,
-      "sha256": "5a03a0da632857a679f8c3d860656b70d065131291db4f90e9edb09cfb50cadf"
+      "sha256": "d0390a63736268e9fb1af06875727393dfe7fde23795055344aa8674b924c9c1"
+    },
+    {
+      "file": "demo-new.png",
+      "label": "Create text, notebook, terminal, or Graviss content in the editor area.",
+      "width": 1100,
+      "height": 620,
+      "sha256": "9b04948e36e83879db12ce67ab54f32d9b5ab63f24bf3a82deded1f33fbef9dc"
     }
   ]
 }
