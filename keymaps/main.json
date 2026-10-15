@@ -1,21 +1,25 @@
 {
   ".tree-view": {
-    "alt-enter": "open-with:toggle"
+    "alt-enter": "launcher:open-resource"
   },
-  ".open-with .select-list": {
-    "enter": "core:confirm",
-    "cmdorctrl-enter": "open-with:new-window",
-    "alt-enter": "open-with:detached-window"
+  ".launcher .select-list": {
+    "enter": "core:confirm"
   },
-  ".open-with .select-list lumine-text-editor[mini]": {
-    "enter": "core:confirm",
-    "cmdorctrl-enter": "open-with:new-window",
-    "alt-enter": "open-with:detached-window"
+  ".launcher .select-list lumine-text-editor[mini]": {
+    "enter": "core:confirm"
   },
-  ".open-with.directory .select-list": {
-    "shift-enter": "open-with:this-window"
+  ".launcher:not(.launcher-new) .select-list": {
+    "cmdorctrl-enter": "launcher:open-new-window",
+    "alt-enter": "launcher:open-detached-window"
   },
-  ".open-with.directory .select-list lumine-text-editor[mini]": {
-    "shift-enter": "open-with:this-window"
+  ".launcher:not(.launcher-new) .select-list lumine-text-editor[mini]": {
+    "cmdorctrl-enter": "launcher:open-new-window",
+    "alt-enter": "launcher:open-detached-window"
+  },
+  ".launcher.directory .select-list": {
+    "shift-enter": "launcher:open-this-window"
+  },
+  ".launcher.directory .select-list lumine-text-editor[mini]": {
+    "shift-enter": "launcher:open-this-window"
   }
 }

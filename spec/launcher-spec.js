@@ -5,7 +5,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { CompositeDisposable } = require("lumine");
 
-describe("Open With", () => {
+describe("Open", () => {
   const primaryClick = process.platform === "darwin" ? { metaKey: true } : { ctrlKey: true };
   let main, external, leases, scratch, file, otherFile, folder, selected, tree, row;
   let projectPaths, newWindow, detachedWindow;
@@ -14,7 +14,7 @@ describe("Open With", () => {
     jasmine.useRealClock();
     projectPaths = lumine.project.getPaths();
     lumine.project.setPaths([]);
-    scratch = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "lumine-open-with-")));
+    scratch = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "lumine-launcher-")));
     file = path.join(scratch, "document.txt");
     otherFile = path.join(scratch, "other.txt");
     folder = path.join(scratch, "project");
@@ -25,7 +25,7 @@ describe("Open With", () => {
     external = (await lumine.packages.activatePackage("open-external")).mainModule;
     lumine.config.set("open-external.flag", false);
     lumine.config.set("open-external.list", ["txt"]);
-    main = (await lumine.packages.activatePackage("open-with")).mainModule;
+    main = (await lumine.packages.activatePackage("launcher")).mainModule;
     selected = [file];
     leases.add(main.consumeTreeViewSelection({ selectedPaths: () => selected }));
     tree = document.createElement("div");
@@ -46,7 +46,7 @@ describe("Open With", () => {
   });
 
   afterEach(async () => {
-    await lumine.packages.deactivatePackage("open-with");
+    await lumine.packages.deactivatePackage("launcher");
     leases.dispose();
     await lumine.packages.deactivatePackage("open-external");
     for (const pane of lumine.workspace.getPanes()) {
@@ -62,12 +62,12 @@ describe("Open With", () => {
       relative === ".." ||
       path.isAbsolute(relative)
     )
-      throw new Error("Open With scratch directory escaped the private temporary root");
+      throw new Error("Open scratch directory escaped the private temporary root");
     fs.rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   });
 
   const event = () => ({ target: row });
-  const show = () => main.toggle(event());
+  const show = () => main.openResource(event());
   const actionNames = (list) => list.getAvailableActions().map(({ command }) => command);
 
   function registerViewer(options = {}) {
@@ -78,7 +78,7 @@ describe("Open With", () => {
     viewer.destroy = jasmine.createSpy("destroy viewer").and.callFake(() => viewer.remove());
     const open = jasmine.createSpy("open viewer").and.returnValue(viewer);
     const descriptor = {
-      id: "open-with:spec-viewer",
+      id: "launcher:spec-viewer",
       label: "Document Viewer",
       canOpen: (uri) => uri === file,
       open,
@@ -155,12 +155,12 @@ describe("Open With", () => {
     const list = host.getModel();
 
     expect(list.getItems().map(({ id }) => id)).toEqual([
-      "open-with:spec-viewer",
+      "launcher:spec-viewer",
       "open-external",
       "open-external:show",
       "text-editor",
     ]);
-    expect(list.getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(list.getSelectedItem().id).toBe("launcher:spec-viewer");
     const rows = list.getElement().querySelectorAll('[role="option"]');
     expect(rows[0].textContent).toContain("Document Viewer");
     expect(rows[0].querySelector(".badge").textContent).toBe("Default");
@@ -193,7 +193,7 @@ describe("Open With", () => {
     const otherPane = originalPane.splitRight();
     otherPane.activate();
     await list.selectItemById("text-editor");
-    const result = await list.runAction("open-with:open");
+    const result = await list.runAction("launcher:open-current");
 
     expect(result.status).toBe("success");
     const editor = originalPane.getItems().find((item) => item.getPath?.() === file);
@@ -207,7 +207,8 @@ describe("Open With", () => {
   for (const allowPending of [true, false]) {
     it(`respects pending configuration ${allowPending} for default opening`, async () => {
       lumine.config.set("core.allowPendingPaneItems", allowPending);
-      await main.openDefault(event());
+      const host = await show();
+      await host.getModel().runAction("launcher:open-current");
       const pane = lumine.workspace.getMainWindow().getEditorContainer().getActivePane();
       const editor = pane.getItems().find((item) => item.getPath?.() === file);
 
@@ -221,12 +222,12 @@ describe("Open With", () => {
     const { open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
     expect(host.getModel().getSelectedItem().id).toBe("text-editor");
-    await host.getModel().selectItemById("open-with:spec-viewer");
-    const result = await host.getModel().runAction("open-with:new-window");
+    await host.getModel().selectItemById("launcher:spec-viewer");
+    const result = await host.getModel().runAction("launcher:open-new-window");
 
     expect(result.status).toBe("success");
     expect(newWindow).toHaveBeenCalledOnceWith(file, {
-      opener: "open-with:spec-viewer",
+      opener: "launcher:spec-viewer",
       pathKind: "file",
       signal: result.signal,
     });
@@ -240,16 +241,16 @@ describe("Open With", () => {
     const { window, pane } = hiddenEditorWindow();
     const host = await show();
     expect(host.getModel().getSelectedItem().id).toBe("text-editor");
-    await host.getModel().selectItemById("open-with:spec-viewer");
+    await host.getModel().selectItemById("launcher:spec-viewer");
     const workspaceOpen = spyOn(lumine.workspace, "open").and.callThrough();
-    const result = await host.getModel().runAction("open-with:detached-window");
+    const result = await host.getModel().runAction("launcher:open-detached-window");
 
     expect(result.status).toBe("success");
     expect(detachedWindow).toHaveBeenCalledOnceWith({ show: false });
     expect(open).toHaveBeenCalledTimes(1);
     const [openedPath, options] = open.calls.mostRecent().args;
     expect(openedPath).toBe(file);
-    expect(options.opener).toBe("open-with:spec-viewer");
+    expect(options.opener).toBe("launcher:spec-viewer");
     expect(options.pane).toBe(pane);
     expect(options.destination).toBe("detached-window");
     expect(options.pathKind).toBe("file");
@@ -269,7 +270,7 @@ describe("Open With", () => {
     const { pane } = hiddenEditorWindow();
     const host = await show();
     await host.getModel().selectItemById("text-editor");
-    const result = await host.getModel().runAction("open-with:detached-window");
+    const result = await host.getModel().runAction("launcher:open-detached-window");
 
     expect(result.status).toBe("success");
     expect(pane.getItems()[0].getText()).toBe("first document\n");
@@ -281,10 +282,10 @@ describe("Open With", () => {
     const host = await show();
     const originalPane = lumine.workspace.getMainWindow().getEditorContainer().getActivePane();
     expect(host.getModel().getSelectedItem().id).toBe("text-editor");
-    const { result } = await clickChoice(host, "open-with:spec-viewer", {}, ".primary-text");
+    const { result } = await clickChoice(host, "launcher:spec-viewer", {}, ".primary-text");
 
     expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:open");
+    expect(result.command).toBe("launcher:open-current");
     expect(open).toHaveBeenCalledTimes(1);
     expect(originalPane.getItems()).toContain(viewer);
     expect(newWindow).not.toHaveBeenCalled();
@@ -296,13 +297,13 @@ describe("Open With", () => {
     const { open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
     expect(host.getModel().getSelectedItem().id).toBe("text-editor");
-    const { click, result } = await clickChoice(host, "open-with:spec-viewer", primaryClick);
+    const { click, result } = await clickChoice(host, "launcher:spec-viewer", primaryClick);
 
     expect(click.defaultPrevented).toBe(true);
     expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:new-window");
+    expect(result.command).toBe("launcher:open-new-window");
     expect(newWindow).toHaveBeenCalledOnceWith(file, {
-      opener: "open-with:spec-viewer",
+      opener: "launcher:spec-viewer",
       pathKind: "file",
       signal: result.signal,
     });
@@ -315,11 +316,11 @@ describe("Open With", () => {
     const { open } = registerViewer();
     const { pane, window } = hiddenEditorWindow();
     const host = await show();
-    expect(host.getModel().getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(host.getModel().getSelectedItem().id).toBe("launcher:spec-viewer");
     const { result } = await clickChoice(host, "text-editor", { altKey: true }, ".primary-text");
 
     expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:detached-window");
+    expect(result.command).toBe("launcher:open-detached-window");
     expect(detachedWindow).toHaveBeenCalledOnceWith({ show: false });
     expect(pane.getItems().length).toBe(1);
     expect(pane.getItems()[0].getPath()).toBe(file);
@@ -334,7 +335,7 @@ describe("Open With", () => {
     registerViewer();
     const host = await show();
     const list = host.getModel();
-    expect(list.getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(list.getSelectedItem().id).toBe("launcher:spec-viewer");
     const execute = spyOn(main, "execute").and.resolveTo();
     const action = jasmine.createSpy("finished action");
     leases.add(list.onDidFinishAction(action));
@@ -361,7 +362,7 @@ describe("Open With", () => {
     const unsupported = await clickChoice(host, "project-folder", { altKey: true });
 
     expect(unsupported.result.status).toBe("unavailable");
-    expect(unsupported.result.command).toBe("open-with:detached-window");
+    expect(unsupported.result.command).toBe("launcher:open-detached-window");
     expect(host.isVisible()).toBe(true);
     expect(lumine.project.getPaths()).toEqual([]);
     expect(newWindow).not.toHaveBeenCalled();
@@ -390,7 +391,7 @@ describe("Open With", () => {
 
     expect(click.defaultPrevented).toBe(true);
     expect(result.status).toBe("success");
-    expect(result.command).toBe("open-with:this-window");
+    expect(result.command).toBe("launcher:open-this-window");
     expect(lumine.project.getPaths()).toEqual([folder]);
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
@@ -408,7 +409,7 @@ describe("Open With", () => {
           : (await clickChoice(host, "project-folder", {}, ".primary-text")).result;
 
       expect(result.status).toBe("success");
-      expect(result.command).toBe("open-with:new-window");
+      expect(result.command).toBe("launcher:open-new-window");
       expect(newWindow).toHaveBeenCalledOnceWith(folder, {
         opener: "project-folder",
         pathKind: "directory",
@@ -427,8 +428,8 @@ describe("Open With", () => {
     const actions = host.getModel().getAvailableActions();
 
     expect(actions.map(({ command }) => command)).toEqual([
-      "open-with:new-window",
-      "open-with:this-window",
+      "launcher:open-new-window",
+      "launcher:open-this-window",
     ]);
     const [newProject, currentProject] = actions;
     expect(newProject.primary).toBe(true);
@@ -449,11 +450,11 @@ describe("Open With", () => {
       button: 0,
       shiftKey: true,
     });
-    choiceRow(list, "open-with:spec-viewer").querySelector(".primary-text").dispatchEvent(click);
+    choiceRow(list, "launcher:spec-viewer").querySelector(".primary-text").dispatchEvent(click);
     await flushMicrotasks();
 
     expect(click.defaultPrevented).toBe(true);
-    expect(list.getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(list.getSelectedItem().id).toBe("launcher:spec-viewer");
     expect(action).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
     expect(lumine.workspace.paneForItem(viewer)).toBeUndefined();
@@ -470,7 +471,9 @@ describe("Open With", () => {
       target: fileInput,
       keystrokes: "shift-enter",
     });
-    expect(fileBindings.some((binding) => binding.command === "open-with:this-window")).toBe(false);
+    expect(fileBindings.some((binding) => binding.command === "launcher:open-this-window")).toBe(
+      false,
+    );
     fileHost.cancel();
     await fileHost.destroy();
     selected = [folder];
@@ -481,7 +484,7 @@ describe("Open With", () => {
       keystrokes: "shift-enter",
     });
 
-    expect(folderBindings[0]?.command).toBe("open-with:this-window");
+    expect(folderBindings[0]?.command).toBe("launcher:open-this-window");
   });
 
   for (const id of ["open-external", "open-external:show"]) {
@@ -513,7 +516,7 @@ describe("Open With", () => {
 
       expect(click.defaultPrevented).toBe(true);
       expect(result.status).toBe("unavailable");
-      expect(result.command).toBe("open-with:this-window");
+      expect(result.command).toBe("launcher:open-this-window");
       expect(host.isVisible()).toBe(true);
       expect(host.getModel().getSelectedItem().id).toBe(id);
       expect(lumine.project.getPaths()).toEqual([]);
@@ -531,13 +534,13 @@ describe("Open With", () => {
       const list = host.getModel();
       await list.selectItemById(id);
       const actions = list.getAvailableActions();
-      expect(actions.map(({ command }) => command)).toEqual(["open-with:open"]);
+      expect(actions.map(({ command }) => command)).toEqual(["launcher:open-current"]);
       expect(actions[0].primary).toBe(true);
       expect(actions[0].keystrokes).toContain("enter");
       const result = await confirmWithEnter(host);
 
       expect(result.status).toBe("success");
-      expect(result.command).toBe("open-with:open");
+      expect(result.command).toBe("launcher:open-current");
       const requested = id === "open-external" ? open : showInFolder;
       const other = id === "open-external" ? showInFolder : open;
       expect(requested).toHaveBeenCalledOnceWith(folder);
@@ -552,10 +555,10 @@ describe("Open With", () => {
     registerViewer();
     const host = await show();
     const list = host.getModel();
-    const retiredRow = choiceRow(list, "open-with:spec-viewer");
+    const retiredRow = choiceRow(list, "launcher:spec-viewer");
     const dispatch = spyOn(lumine.commands, "dispatch").and.callThrough();
     await list.setQuery("document");
-    const currentRow = choiceRow(list, "open-with:spec-viewer");
+    const currentRow = choiceRow(list, "launcher:spec-viewer");
     expect(currentRow).not.toBe(retiredRow);
     expect(currentRow.querySelector(".character-match")).not.toBeNull();
     const retiredClick = new MouseEvent("click", {
@@ -569,14 +572,14 @@ describe("Open With", () => {
 
     expect(retiredClick.defaultPrevented).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
-    const { result } = await clickChoice(host, "open-with:spec-viewer", primaryClick, ".badge");
+    const { result } = await clickChoice(host, "launcher:spec-viewer", primaryClick, ".badge");
     expect(result.status).toBe("success");
     expect(newWindow).toHaveBeenCalledTimes(1);
     expect(dispatch.calls.first().args[0]).toBe(list.getElement());
-    expect(dispatch.calls.first().args[1]).toBe("open-with:new-window");
+    expect(dispatch.calls.first().args[1]).toBe("launcher:open-new-window");
     expect(host.isDestroyed()).toBe(true);
     const cancelledHost = await show();
-    const destroyedRow = choiceRow(cancelledHost.getModel(), "open-with:spec-viewer");
+    const destroyedRow = choiceRow(cancelledHost.getModel(), "launcher:spec-viewer");
     cancelledHost.cancel();
     await cancelledHost.destroy();
     expect(cancelledHost.isDestroyed()).toBe(true);
@@ -599,12 +602,12 @@ describe("Open With", () => {
     const { viewer, open } = registerViewer();
     lumine.project.setPaths([folder]);
     const host = await show();
-    const result = await host.getModel().runAction("open-with:this-window");
+    const result = await host.getModel().runAction("launcher:open-this-window");
 
     expect(result.status).toBe("success");
     expect(lumine.project.getPaths()).toEqual([scratch]);
     expect(lumine.workspace.paneForItem(viewer)).toBeDefined();
-    expect(open.calls.mostRecent().args[1].opener).toBe("open-with:spec-viewer");
+    expect(open.calls.mostRecent().args[1].opener).toBe("launcher:spec-viewer");
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
   });
@@ -619,18 +622,18 @@ describe("Open With", () => {
       const list = host.getModel();
       await list.selectItemById(id);
 
-      expect(actionNames(list)).toEqual(["open-with:open"]);
+      expect(actionNames(list)).toEqual(["launcher:open-current"]);
       for (const command of [
-        "open-with:new-window",
-        "open-with:detached-window",
-        "open-with:this-window",
+        "launcher:open-new-window",
+        "launcher:open-detached-window",
+        "launcher:open-this-window",
       ]) {
         expect((await list.runAction(command)).status).toBe("unavailable");
       }
       expect(action).not.toHaveBeenCalled();
       expect(newWindow).not.toHaveBeenCalled();
       expect(detachedWindow).not.toHaveBeenCalled();
-      expect((await list.runAction("open-with:open")).status).toBe("success");
+      expect((await list.runAction("launcher:open-current")).status).toBe("success");
       expect(action).toHaveBeenCalledOnceWith(file);
       expect(lumine.workspace.getPaneItems()).toEqual([]);
     });
@@ -652,13 +655,13 @@ describe("Open With", () => {
       isDefault: true,
       destinations: ["current", "new-window"],
     });
-    expect(actionNames(list)).not.toContain("open-with:open");
-    expect(actionNames(list)).toContain("open-with:this-window");
-    expect(actionNames(list)).toContain("open-with:new-window");
-    expect(actionNames(list)).not.toContain("open-with:detached-window");
-    expect((await list.runAction("open-with:detached-window")).status).toBe("unavailable");
+    expect(actionNames(list)).not.toContain("launcher:open-current");
+    expect(actionNames(list)).toContain("launcher:open-this-window");
+    expect(actionNames(list)).toContain("launcher:open-new-window");
+    expect(actionNames(list)).not.toContain("launcher:open-detached-window");
+    expect((await list.runAction("launcher:open-detached-window")).status).toBe("unavailable");
     expect(detachedWindow).not.toHaveBeenCalled();
-    expect((await list.runAction("open-with:this-window")).status).toBe("success");
+    expect((await list.runAction("launcher:open-this-window")).status).toBe("success");
     expect(lumine.project.getPaths()).toEqual([folder]);
     expect(lumine.workspace.getTextEditors().some((editor) => editor.getPath() === folder)).toBe(
       false,
@@ -668,7 +671,7 @@ describe("Open With", () => {
   it("opens a folder as a separate project in a new window", async () => {
     selected = [folder];
     const host = await show();
-    const result = await host.getModel().runAction("open-with:new-window");
+    const result = await host.getModel().runAction("launcher:open-new-window");
 
     expect(result.status).toBe("success");
     expect(newWindow).toHaveBeenCalledOnceWith(folder, {
@@ -680,60 +683,12 @@ describe("Open With", () => {
     expect(detachedWindow).not.toHaveBeenCalled();
   });
 
-  it("refuses a direct detached-window command for a folder with a reason", async () => {
-    selected = [folder];
-    const warning = spyOn(lumine.notifications, "addWarning");
-    await main.openDefault(event(), "detached-window");
-
-    expect(warning).toHaveBeenCalledTimes(1);
-    expect(warning.calls.mostRecent().args[0]).toContain("Project Folder");
-    expect(detachedWindow).not.toHaveBeenCalled();
-    expect(newWindow).not.toHaveBeenCalled();
-    expect(lumine.project.getPaths()).toEqual([]);
-  });
-
-  it("keeps direct commands on the workspace for user-defined quick bindings", () => {
-    const commands = lumine.commands.findCommands({ target: lumine.workspace.getElement() });
-    for (const name of [
-      "open-with:toggle",
-      "open-with:open",
-      "open-with:new-window",
-      "open-with:detached-window",
-      "open-with:this-window",
-    ])
-      expect(commands.map((command) => command.name)).toContain(name);
-  });
-
-  for (const [command, destination] of [
-    ["open-with:open", "current"],
-    ["open-with:new-window", "new-window"],
-    ["open-with:detached-window", "detached-window"],
-  ]) {
-    it(`uses the default opener for the direct ${command} command`, async () => {
-      registerViewer();
-      const host = await show();
-      await host.getModel().selectItemById("text-editor");
-      const execute = spyOn(main, "execute").and.resolveTo();
-      await lumine.commands.dispatch(row, command);
-
-      expect(execute).toHaveBeenCalledTimes(1);
-      const [context, choice, actualDestination] = execute.calls.mostRecent().args;
-      expect(context.path).toBe(file);
-      expect(choice.id).toBe("open-with:spec-viewer");
-      expect(actualDestination).toBe(destination);
-    });
-  }
-
-  it("keeps an external default from opening a new or detached window through a direct command", async () => {
-    lumine.config.set("open-external.flag", true);
-    const warning = spyOn(lumine.notifications, "addWarning");
-    await main.openDefault(event(), "new-window");
-    await main.openDefault(event(), "detached-window");
-
-    expect(warning).toHaveBeenCalledTimes(2);
-    expect(lumine.shell.openPath).not.toHaveBeenCalled();
-    expect(newWindow).not.toHaveBeenCalled();
-    expect(detachedWindow).not.toHaveBeenCalled();
+  it("registers picker commands and a resource wrapper at workspace scope", () => {
+    const names = lumine.commands
+      .findCommands({ target: lumine.workspace.getElement() })
+      .map(({ name }) => name)
+      .filter((name) => name.startsWith("launcher:"));
+    expect(names.sort()).toEqual(["launcher:new", "launcher:open", "launcher:open-resource"]);
   });
 
   it("handles a picker command once with its selected opener without bubbling to the workspace default", async () => {
@@ -742,14 +697,12 @@ describe("Open With", () => {
     const list = host.getModel();
     await list.selectItemById("text-editor");
     const execute = spyOn(main, "execute").and.resolveTo();
-    const openDefault = spyOn(main, "openDefault").and.callThrough();
-    await lumine.commands.dispatch(list.getQueryEditor().getElement(), "open-with:new-window");
+    await lumine.commands.dispatch(list.getQueryEditor().getElement(), "launcher:open-new-window");
     await flushMicrotasks();
 
     expect(execute).toHaveBeenCalledTimes(1);
     expect(execute.calls.mostRecent().args[1].id).toBe("text-editor");
     expect(execute.calls.mostRecent().args[2]).toBe("new-window");
-    expect(openDefault).not.toHaveBeenCalled();
   });
 
   it("resolves Enter, Ctrl/Cmd+Enter and Alt+Enter on the picker input", async () => {
@@ -757,8 +710,8 @@ describe("Open With", () => {
     const input = host.getModel().getQueryEditor().getElement();
     for (const [keystrokes, command] of [
       ["enter", "core:confirm"],
-      [process.platform === "darwin" ? "cmd-enter" : "ctrl-enter", "open-with:new-window"],
-      ["alt-enter", "open-with:detached-window"],
+      [process.platform === "darwin" ? "cmd-enter" : "ctrl-enter", "launcher:open-new-window"],
+      ["alt-enter", "launcher:open-detached-window"],
     ]) {
       const matches = lumine.keymaps.findKeyBindings({ target: input, keystrokes });
       expect(matches[0]?.command).toBe(command);
@@ -768,28 +721,55 @@ describe("Open With", () => {
       .getAvailableActions()
       .filter((action) => action.primary);
     expect(primary.length).toBe(1);
-    expect(primary[0].command).toBe("open-with:open");
+    expect(primary[0].command).toBe("launcher:open-current");
     expect(primary[0].keystrokes).toContain("enter");
   });
 
-  it("uses the active saved item outside the tree view", async () => {
-    await lumine.workspace.open(otherFile, { opener: "text-editor" });
-    const host = await main.toggle({ target: lumine.workspace.getElement() });
+  it("uses the saved item from its center context menu", async () => {
+    const editor = await lumine.workspace.open(otherFile, { opener: "text-editor" });
+    const host = await main.openResource({ target: editor.getElement() });
     const open = spyOn(lumine.workspace, "open").and.callThrough();
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
 
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
+  });
+
+  it("selects a resource in a native dialog for global Open", async () => {
+    const window = lumine.workspace.getMainWindow();
+    const pane = window.getEditorContainer().getActivePane();
+    const choose = spyOn(window, "showOpenDialog").and.resolveTo({
+      canceled: false,
+      filePaths: [otherFile],
+    });
+    const focused = await lumine.workspace.open(file);
+    const host = await main.open({ target: focused.getElement() });
+    const another = pane.splitRight();
+    another.activate();
+    await host.getModel().runAction("launcher:open-current");
+    expect(choose).toHaveBeenCalledOnceWith({ title: "Open", properties: ["openFile"] });
+    expect(pane.getItems().some((item) => item.getPath?.() === otherFile)).toBe(true);
+    expect(another.getItems()).toEqual([]);
+  });
+
+  it("keeps a cancelled native dialog from creating a picker", async () => {
+    spyOn(lumine.workspace.getMainWindow(), "showOpenDialog").and.resolveTo({
+      canceled: true,
+      filePaths: [],
+    });
+    expect(await main.open({ target: lumine.workspace.getElement() })).toBeUndefined();
+    expect(main.pickers.size).toBe(0);
+    expect(main.requests.size).toBe(0);
   });
 
   it("opens an explicit selected path in the captured pane and preserves its cursor position", async () => {
     const original = lumine.workspace.getActivePane();
     const another = original.splitRight();
     another.activate();
-    const host = await main.toggle({
+    const host = await main.open({
       target: lumine.workspace.getElement(),
       detail: { path: file, pane: original, initialLine: 0, initialColumn: 3 },
     });
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
 
     const editor = original.getItems().find((item) => item.getPath?.() === file);
     expect(editor.getCursorBufferPosition().toArray()).toEqual([0, 3]);
@@ -800,19 +780,19 @@ describe("Open With", () => {
     const { open } = registerViewer();
     const uri = pathToFileURL(file);
     uri.hash = "nameddest=GROUP";
-    const host = await main.toggle({ target: row, detail: { path: uri.href } });
-    await host.getModel().runAction("open-with:open");
+    const host = await main.open({ target: row, detail: { path: uri.href } });
+    await host.getModel().runAction("launcher:open-current");
 
     expect(open.calls.mostRecent().args[0]).toBe(file);
     expect(open.calls.mostRecent().args[1].uriFragment).toBe("#nameddest=GROUP");
   });
 
   it("carries explicit viewer positions and fragments when requesting a new window", async () => {
-    const host = await main.toggle({
+    const host = await main.open({
       target: row,
       detail: { path: file, initialLine: 12, initialColumn: 3, uriFragment: "#nameddest=GROUP" },
     });
-    await host.getModel().runAction("open-with:new-window");
+    await host.getModel().runAction("launcher:open-new-window");
 
     expect(newWindow.calls.mostRecent().args[1]).toEqual(
       jasmine.objectContaining({
@@ -827,7 +807,7 @@ describe("Open With", () => {
   it("preserves every project folder and launch mode in a new project window", async () => {
     const secondFolder = path.join(scratch, "another-project");
     fs.mkdirSync(secondFolder);
-    const host = await main.toggle({
+    const host = await main.open({
       target: row,
       detail: { project: { paths: [folder, secondFolder], devMode: true, safeMode: true } },
     });
@@ -837,7 +817,7 @@ describe("Open With", () => {
       "open-external",
       "open-external:show",
     ]);
-    await list.runAction("open-with:new-window");
+    await list.runAction("launcher:open-new-window");
 
     expect(lumine.application.openWindow).toHaveBeenCalledOnceWith({
       pathsToOpen: [folder, secondFolder],
@@ -854,13 +834,13 @@ describe("Open With", () => {
     const secondFolder = path.join(scratch, "another-project");
     fs.mkdirSync(secondFolder);
     const target = { target: row, detail: { project: { paths: [folder, secondFolder] } } };
-    let host = await main.toggle(target);
-    await host.getModel().runAction("open-with:this-window");
+    let host = await main.open(target);
+    await host.getModel().runAction("launcher:open-this-window");
     expect(lumine.project.getPaths()).toEqual([folder, secondFolder]);
 
-    host = await main.toggle(target);
+    host = await main.open(target);
     await host.getModel().selectItemById("open-external:show");
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
     expect(lumine.shell.showItemInFolder.calls.allArgs()).toEqual([[folder], [secondFolder]]);
     expect(lumine.application.openWindow).not.toHaveBeenCalled();
   });
@@ -919,7 +899,7 @@ describe("Open With", () => {
         );
       await began;
       if (retirement === "cancellation") controller.abort();
-      else if (retirement === "deactivation") await lumine.packages.deactivatePackage("open-with");
+      else if (retirement === "deactivation") await lumine.packages.deactivatePackage("launcher");
       else spyOn(context.window, "isDestroyed").and.returnValue(true);
       release();
       const result = await pending;
@@ -930,7 +910,7 @@ describe("Open With", () => {
   }
 
   it("refuses an incomplete project without partially replacing the current project", async () => {
-    const host = await main.toggle({
+    const host = await main.open({
       target: row,
       detail: { project: { paths: [folder, path.join(scratch, "missing")] } },
     });
@@ -942,7 +922,7 @@ describe("Open With", () => {
 
   it("resolves Alt-Enter on the tree view to the shared chooser", () => {
     const bindings = lumine.keymaps.findKeyBindings({ target: row, keystrokes: "alt-enter" });
-    expect(bindings[0]?.command).toBe("open-with:toggle");
+    expect(bindings[0]?.command).toBe("launcher:open-resource");
   });
 
   it("keeps the chooser alive when a suspended action menu reports an opener failure", async () => {
@@ -954,14 +934,14 @@ describe("Open With", () => {
       .getModalPanels()
       .find((panel) => panel.isVisible())
       .getItem();
-    await actions.selectItemById("open-with:open");
+    await actions.selectItemById("launcher:open-current");
     await expectAsync(actions.confirmSelection()).toBeRejectedWithError(
       "The viewer failed to open",
     );
     await flushMicrotasks();
 
     expect(host.isDestroyed()).toBe(false);
-    expect(host.getModel().getSelectedItem().id).toBe("open-with:spec-viewer");
+    expect(host.getModel().getSelectedItem().id).toBe("launcher:spec-viewer");
     expect(lumine.workspace.getPaneItems()).toEqual([]);
   });
 
@@ -974,8 +954,8 @@ describe("Open With", () => {
     selected = [file, otherFile];
     await show();
     expect(warning).toHaveBeenCalledTimes(1);
-    await lumine.workspace.open();
-    await main.toggle({ target: lumine.workspace.getElement() });
+    const editor = await lumine.workspace.open();
+    await main.openResource({ target: editor.getElement() });
     expect(warning).toHaveBeenCalledTimes(2);
     expect(catalog).not.toHaveBeenCalled();
   });
@@ -987,7 +967,7 @@ describe("Open With", () => {
     first.dispose();
     const host = await show();
     const open = spyOn(lumine.workspace, "open").and.callThrough();
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
 
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
   });
@@ -995,13 +975,13 @@ describe("Open With", () => {
   it("does not let an old provider lease retire the new package generation's selection", async () => {
     const oldLease = main.consumeTreeViewSelection({ selectedPaths: () => [file] });
     leases.add(oldLease);
-    await lumine.packages.deactivatePackage("open-with");
-    main = (await lumine.packages.activatePackage("open-with")).mainModule;
+    await lumine.packages.deactivatePackage("launcher");
+    main = (await lumine.packages.activatePackage("launcher")).mainModule;
     leases.add(main.consumeTreeViewSelection({ selectedPaths: () => [otherFile] }));
     oldLease.dispose();
     const host = await show();
     const open = spyOn(lumine.workspace, "open").and.callThrough();
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
 
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
   });
@@ -1011,7 +991,7 @@ describe("Open With", () => {
     await show();
     expect(first.isDestroyed()).toBe(true);
     const second = await show();
-    await lumine.packages.deactivatePackage("open-with");
+    await lumine.packages.deactivatePackage("launcher");
 
     expect(second.isDestroyed()).toBe(true);
     expect(second.getModel().isDestroyed()).toBe(true);
@@ -1019,7 +999,7 @@ describe("Open With", () => {
       lumine.commands
         .findCommands({ target: lumine.workspace.getElement() })
         .map(({ name }) => name),
-    ).not.toContain("open-with:toggle");
+    ).not.toContain("launcher:open");
   });
 
   it("does not recreate a picker when path lookup completes after package deactivation", async () => {
@@ -1028,7 +1008,7 @@ describe("Open With", () => {
     const addSelectList = spyOn(lumine.workspace, "addSelectList").and.callThrough();
     const pending = show();
     await flushMicrotasks();
-    await lumine.packages.deactivatePackage("open-with");
+    await lumine.packages.deactivatePackage("launcher");
     release({ isFile: () => true, isDirectory: () => false });
     await pending;
 
@@ -1066,7 +1046,7 @@ describe("Open With", () => {
     lookups[0]({ isFile: () => true, isDirectory: () => false });
     expect(await first).toBeUndefined();
     const open = spyOn(lumine.workspace, "open").and.callThrough();
-    await host.getModel().runAction("open-with:open");
+    await host.getModel().runAction("launcher:open-current");
 
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
     expect(main.requests.size).toBe(0);
@@ -1079,7 +1059,7 @@ describe("Open With", () => {
     const error = spyOn(lumine.notifications, "addError");
     await show();
 
-    expect(error).toHaveBeenCalledOnceWith("Unable to show Open With.", {
+    expect(error).toHaveBeenCalledOnceWith("Unable to show Launcher.", {
       detail: "Discovery failed",
       dismissable: true,
     });
@@ -1103,9 +1083,9 @@ describe("Open With", () => {
       });
       const open = spyOn(lumine.workspace, "open").and.callThrough();
       const host = await show();
-      const action = host.getModel().runAction("open-with:open");
+      const action = host.getModel().runAction("launcher:open-current");
       const options = await began;
-      if (retirement === "deactivation") await lumine.packages.deactivatePackage("open-with");
+      if (retirement === "deactivation") await lumine.packages.deactivatePackage("launcher");
       else host.cancel();
       const result = await action;
 
@@ -1135,8 +1115,8 @@ describe("Open With", () => {
     });
     const open = spyOn(lumine.workspace, "open").and.callThrough();
     const host = await show();
-    await host.getModel().selectItemById("open-with:spec-viewer");
-    const action = host.getModel().runAction("open-with:this-window");
+    await host.getModel().selectItemById("launcher:spec-viewer");
+    const action = host.getModel().runAction("launcher:open-this-window");
     const options = await began;
     host.cancel();
     const result = await action;
@@ -1160,7 +1140,7 @@ describe("Open With", () => {
     window.show.and.returnValues(new Promise((resolve) => (release = resolve)), Promise.resolve());
     const execute = spyOn(main, "execute").and.callThrough();
     const host = await show();
-    const action = host.getModel().runAction("open-with:detached-window");
+    const action = host.getModel().runAction("launcher:open-detached-window");
     await conditionPromise(() => window.show.calls.count() === 1);
     host.cancel();
 
@@ -1180,7 +1160,7 @@ describe("Open With", () => {
     const host = await show();
     const list = host.getModel();
     const open = spyOn(lumine.workspace, "open").and.callThrough();
-    const action = list.runAction("open-with:detached-window");
+    const action = list.runAction("launcher:open-detached-window");
     await conditionPromise(() => detachedWindow.calls.count() === 1);
     host.cancel();
     expect((await action).status).toBe("aborted");
@@ -1199,9 +1179,9 @@ describe("Open With", () => {
     registerViewer({ canOpen: () => available });
     const host = await show();
     available = false;
-    await expectAsync(host.getModel().runAction("open-with:detached-window")).toBeRejectedWithError(
-      "The selected opener is no longer available.",
-    );
+    await expectAsync(
+      host.getModel().runAction("launcher:open-detached-window"),
+    ).toBeRejectedWithError("The selected opener is no longer available.");
     expect(detachedWindow).not.toHaveBeenCalled();
     expect(newWindow).not.toHaveBeenCalled();
   });

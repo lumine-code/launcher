@@ -1,72 +1,65 @@
-# open-with
+# launcher
 
-Choose how and where to open files and folders.
+Create workspace content and choose how and where to open resources.
 
 ## Features
 
-- **File actions**: choose an available file opener, with the default first and the text editor always available.
+- **New content**: choose a registered content type and create it in the captured editor pane.
+- **Resource opening**: choose an available opener, with the default first and the text editor always available for files.
 - **Window destinations**: open a document in the current window, a new project window, or a detached editor window.
-- **Folder actions**: open a folder as a project in the current window or a new window.
-- **System actions**: open a path externally or reveal it in the system file manager.
-- **Direct commands**: use the default opener without showing the picker.
-
-![Choose a registered opener for a Markdown file, with the default editor identified.](.github/demo.png)
+- **Project and system actions**: open folders as projects, open resources externally, or reveal them in the system file manager.
+- **Extensible providers**: packages contribute new content through a disposable service contract.
 
 ## Installation
 
-To install `open-with` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/open-with`.
+To install `launcher` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/launcher`.
 
 ## Commands
 
 Commands available in `lumine-workspace`:
 
-- `open-with:toggle`: show or hide the action picker for the selected tree entry or active file,
-- `open-with:open`: open the selected path using its default opener,
-- `open-with:new-window`: open the selected path with its default opener in a new project window,
-- `open-with:detached-window`: open the selected file with its default opener in a detached editor window,
-- `open-with:this-window`: open the selected path with its default opener as the current window's project.
+- `launcher:new`: choose new content for the current editor pane,
+- `launcher:open`: choose a resource and how to open it,
+- `launcher:open-resource`: choose how to open the selected tree entry or saved center content.
 
-Commands available in `.open-with .select-list`:
+Commands available in `.launcher .select-list` when opening a resource:
 
-- `open-with:open`: run the selected file opener or system action in the current window,
-- `open-with:new-window`: use the selected opener in a new project window,
-- `open-with:detached-window`: use the selected opener in a detached editor window,
-- `open-with:this-window`: use the selected opener as the current window's project.
+- `launcher:open-current`: use the selected opener in the current window,
+- `launcher:open-new-window`: use the selected opener in a new project window,
+- `launcher:open-detached-window`: use the selected opener in a detached editor window,
+- `launcher:open-this-window`: use the selected opener as the current window's project.
+
+Commands available in `.launcher-new .select-list`:
+
+- `launcher:create`: create the selected content in the captured editor pane.
 
 ## Usage
 
-Choose Open With from a file or folder's tree context menu, or use the package menu for the active file. The picker marks the action that ordinary opening would use as Default. Window destinations are available only for actions that open editor content; external opening and showing a path in the file manager have no editor-window destination. Folders open as projects in a new window by default, while This Window switches the current project to the folder. For files, Open uses the current project's active editor pane, while This Window replaces the project with the file's containing directory.
+Choose New… from File or a center pane's context menu to select a content type. The chosen provider creates a fresh item; Launcher opens it in that pane's editor area. Each provider owns its document, process, persistence, and save behavior.
 
-Other packages can open the chooser for an explicit local path or file URL by dispatching `open-with:toggle` with command detail. Capture the initiating pane before asynchronous work; optional `initialLine` and `initialColumn` are zero-based, and `uriFragment` preserves a viewer destination such as `#nameddest=GROUP`.
+Choose Open… from File to select a file and its opener. From the tree or a saved center item, Open… uses that resource directly. The picker marks the action ordinary opening would use as Default. Window destinations apply only to actions that support them. Folders open as projects in a new window by default; This Window switches the current project to the folder.
 
-```js
-await lumine.commands.dispatch(element, "open-with:toggle", {
-  path: filePath,
-  pane,
-  initialLine: 12,
-  initialColumn: 3,
-});
-```
-
-For a project, pass `project: { paths, devMode, safeMode }` instead of `path`. The chooser preserves the complete folder set and requested launch modes. System actions apply to every project folder.
+Packages can request either picker through the launcher service. Capture the initiating pane before asynchronous work. Explicit opening accepts a local path or file URL, zero-based cursor positions, and a URI fragment for viewer destinations. Project requests preserve their complete folder set and launch modes; see the service contract for the request shape.
 
 ## Customization
 
 Adjust the picker width and badges in your `styles.css`:
 
 ```css
-.open-with {
+.launcher {
   max-width: 640px;
 }
-.open-with .badge {
+.launcher .badge {
   border-radius: 4px;
 }
 ```
 
 ## Services
 
-- `tree-view.selection`: consumed to read the selected paths and identify entries in the tree.
-- `background-tips.provider`: provided to background-tips to explain the action picker.
+- [`launcher`](docs/launcher.md): provided to packages that request the Open or New picker.
+- [`launcher.provider`](docs/launcher.provider.md): consumed to discover factories for new center content.
+- `tree-view.selection`: consumed to read selected paths in the tree.
+- `background-tips.provider`: provided to background-tips to explain content creation and resource opening.
 
 ## Contributing
 

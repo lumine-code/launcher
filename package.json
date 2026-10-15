@@ -1,26 +1,30 @@
 {
-  "name": "open-with",
+  "name": "launcher",
   "author": "lumine-code",
   "version": "1.0.0",
-  "description": "Choose how and where to open files and folders.",
+  "description": "Create workspace content and choose how and where to open resources.",
   "keywords": [
-    "opener",
-    "file-manager",
-    "directory",
+    "notebook",
+    "terminal",
     "viewer",
-    "navigation"
+    "opener",
+    "workspace"
   ],
-  "repository": "https://github.com/lumine-code/open-with",
+  "repository": "https://github.com/lumine-code/launcher",
   "bugs": {
-    "url": "https://github.com/lumine-code/open-with/issues"
+    "url": "https://github.com/lumine-code/launcher/issues"
   },
   "license": "MIT",
   "main": "./lib/main",
   "specPackages": [
     "tree-view",
-    "open-external"
+    "open-external",
+    "jupyter-view",
+    "terminal",
+    "graviss"
   ],
   "files": [
+    "docs",
     "keymaps",
     "lib",
     "menus",
@@ -40,12 +44,22 @@
       "versions": {
         "1.0.0": "provideBackgroundTips"
       }
+    },
+    "launcher": {
+      "versions": {
+        "1.0.0": "provideLauncher"
+      }
     }
   },
   "consumedServices": {
     "tree-view.selection": {
       "versions": {
         "^1.0.0": "consumeTreeViewSelection"
+      }
+    },
+    "launcher.provider": {
+      "versions": {
+        "^1.0.0": "consumeLauncher"
       }
     }
   },
