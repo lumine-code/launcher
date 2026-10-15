@@ -756,12 +756,12 @@ describe("Open With", () => {
     expect(openDefault).not.toHaveBeenCalled();
   });
 
-  it("resolves Enter, Ctrl+Enter and Alt+Enter on the picker input", async () => {
+  it("resolves Enter, Ctrl/Cmd+Enter and Alt+Enter on the picker input", async () => {
     const host = await show();
     const input = host.getModel().getQueryEditor().getElement();
     for (const [keystrokes, command] of [
       ["enter", "core:confirm"],
-      ["ctrl-enter", "open-with:new-window"],
+      [process.platform === "darwin" ? "cmd-enter" : "ctrl-enter", "open-with:new-window"],
       ["alt-enter", "open-with:detached-window"],
     ]) {
       const matches = lumine.keymaps.findKeyBindings({ target: input, keystrokes });

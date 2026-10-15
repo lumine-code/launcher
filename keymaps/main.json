@@ -4,12 +4,12 @@
   },
   ".open-with .select-list": {
     "enter": "core:confirm",
-    "ctrl-enter": "open-with:new-window",
+    "cmdorctrl-enter": "open-with:new-window",
     "alt-enter": "open-with:detached-window"
   },
   ".open-with .select-list lumine-text-editor[mini]": {
     "enter": "core:confirm",
-    "ctrl-enter": "open-with:new-window",
+    "cmdorctrl-enter": "open-with:new-window",
     "alt-enter": "open-with:detached-window"
   },
   ".open-with.directory .select-list": {
