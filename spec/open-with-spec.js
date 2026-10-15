@@ -6,6 +6,7 @@ const { pathToFileURL } = require("node:url");
 const { CompositeDisposable } = require("lumine");
 
 describe("Open With", () => {
+  const primaryClick = process.platform === "darwin" ? { metaKey: true } : { ctrlKey: true };
   let main, external, leases, scratch, file, otherFile, folder, selected, tree, row;
   let projectPaths, newWindow, detachedWindow;
 
@@ -291,11 +292,11 @@ describe("Open With", () => {
     expect(host.isDestroyed()).toBe(true);
   });
 
-  it("opens a nonselected nondefault opener exactly once on Ctrl-click", async () => {
+  it("opens a nonselected nondefault opener exactly once on Cmd/Ctrl-click", async () => {
     const { open } = registerViewer({ isDefaultEligible: () => false });
     const host = await show();
     expect(host.getModel().getSelectedItem().id).toBe("text-editor");
-    const { click, result } = await clickChoice(host, "open-with:spec-viewer", { ctrlKey: true });
+    const { click, result } = await clickChoice(host, "open-with:spec-viewer", primaryClick);
 
     expect(click.defaultPrevented).toBe(true);
     expect(result.status).toBe("success");
@@ -329,7 +330,7 @@ describe("Open With", () => {
     expect(newWindow).not.toHaveBeenCalled();
   });
 
-  it("only selects the opener when Alt and Ctrl are held without an Enter binding", async () => {
+  it("only selects the opener when Alt and Cmd/Ctrl are held without an Enter binding", async () => {
     registerViewer();
     const host = await show();
     const list = host.getModel();
@@ -342,7 +343,7 @@ describe("Open With", () => {
       cancelable: true,
       button: 0,
       altKey: true,
-      ctrlKey: true,
+      ...primaryClick,
     });
     choiceRow(list, "text-editor").dispatchEvent(click);
     await flushMicrotasks();
@@ -354,7 +355,7 @@ describe("Open With", () => {
     expect(host.isVisible()).toBe(true);
   });
 
-  it("keeps a folder Alt-click unavailable and opens its project only on Ctrl-click", async () => {
+  it("keeps a folder Alt-click unavailable and opens its project only on Cmd/Ctrl-click", async () => {
     selected = [folder];
     const host = await show();
     const unsupported = await clickChoice(host, "project-folder", { altKey: true });
@@ -365,7 +366,7 @@ describe("Open With", () => {
     expect(lumine.project.getPaths()).toEqual([]);
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
-    const { result } = await clickChoice(host, "project-folder", { ctrlKey: true });
+    const { result } = await clickChoice(host, "project-folder", primaryClick);
     expect(result.status).toBe("success");
     expect(newWindow).toHaveBeenCalledOnceWith(folder, {
       opener: "project-folder",
@@ -484,11 +485,11 @@ describe("Open With", () => {
   });
 
   for (const id of ["open-external", "open-external:show"]) {
-    it(`does not fall back to the primary action for Ctrl-click or Alt-click on ${id}`, async () => {
+    it(`does not fall back to the primary action for Cmd/Ctrl-click or Alt-click on ${id}`, async () => {
       const open = spyOn(external, "openExternal").and.resolveTo("");
       const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
       const host = await show();
-      for (const modifiers of [{ ctrlKey: true }, { altKey: true }]) {
+      for (const modifiers of [primaryClick, { altKey: true }]) {
         const { click, result } = await clickChoice(host, id, modifiers, ".primary-text");
         expect(click.defaultPrevented).toBe(true);
         expect(result.status).toBe("unavailable");
@@ -561,19 +562,14 @@ describe("Open With", () => {
       bubbles: true,
       cancelable: true,
       button: 0,
-      ctrlKey: true,
+      ...primaryClick,
     });
     retiredRow.querySelector(".badge").dispatchEvent(retiredClick);
     await flushMicrotasks();
 
     expect(retiredClick.defaultPrevented).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
-    const { result } = await clickChoice(
-      host,
-      "open-with:spec-viewer",
-      { ctrlKey: true },
-      ".badge",
-    );
+    const { result } = await clickChoice(host, "open-with:spec-viewer", primaryClick, ".badge");
     expect(result.status).toBe("success");
     expect(newWindow).toHaveBeenCalledTimes(1);
     expect(dispatch.calls.first().args[0]).toBe(list.getElement());
