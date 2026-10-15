@@ -7,11 +7,11 @@
           "label": "Launcher",
           "submenu": [
             {
-              "label": "New…",
+              "label": "New Content…",
               "command": "launcher:new"
             },
             {
-              "label": "Open…",
+              "label": "Open Resource…",
               "command": "launcher:open"
             }
           ]
@@ -54,11 +54,15 @@
       },
       {
         "label": "New…",
-        "command": "launcher:new"
+        "command": "launcher:new",
+        "group": "views",
+        "order": 10
       },
       {
         "label": "Open…",
-        "command": "launcher:open-resource"
+        "command": "launcher:open-resource",
+        "group": "views",
+        "order": 20
       },
       {
         "type": "separator"

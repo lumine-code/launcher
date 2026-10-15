@@ -77,8 +77,8 @@ describe("Launcher New", () => {
     const menus = require("../menus/main.json");
     const packageActions = menus.menu[0].submenu[0].submenu;
     expect(packageActions).toEqual([
-      { label: "New\u2026", command: "launcher:new" },
-      { label: "Open\u2026", command: "launcher:open" },
+      { label: "New Content\u2026", command: "launcher:new" },
+      { label: "Open Resource\u2026", command: "launcher:open" },
     ]);
     const contextActions = Object.values(menus["context-menu"])
       .flat()
