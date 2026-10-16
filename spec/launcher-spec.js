@@ -114,7 +114,7 @@ describe("Open", () => {
     return list.getElement().querySelectorAll('[role="option"]')[index];
   }
 
-  async function clickChoice(host, id, modifiers = {}, selector) {
+  async function clickChoice(host, id, modifiers = {}, selector, waitForAction = true) {
     const list = host.getModel();
     const row = choiceRow(list, id);
     const target = selector ? row.querySelector(selector) : row;
@@ -128,7 +128,7 @@ describe("Open", () => {
       ...modifiers,
     });
     target.dispatchEvent(click);
-    const result = await finished;
+    const result = waitForAction ? await finished : undefined;
     subscription.dispose();
     await flushMicrotasks();
     return { click, result };
@@ -359,10 +359,15 @@ describe("Open", () => {
   it("keeps a folder Alt-click unavailable and opens its project only on Cmd/Ctrl-click", async () => {
     selected = [folder];
     const host = await show();
-    const unsupported = await clickChoice(host, "project-folder", { altKey: true });
+    const action = jasmine.createSpy("unavailable action");
+    const subscription = host.getModel().onDidStartAction(action);
+    await clickChoice(host, "project-folder", { altKey: true }, undefined, false);
+    subscription.dispose();
 
-    expect(unsupported.result.status).toBe("unavailable");
-    expect(unsupported.result.command).toBe("launcher:open-detached-window");
+    expect(action).not.toHaveBeenCalled();
+    expect(
+      lumine.commands.canDispatch(host.getModel().getElement(), "launcher:open-detached-window"),
+    ).toBe(false);
     expect(host.isVisible()).toBe(true);
     expect(lumine.project.getPaths()).toEqual([]);
     expect(newWindow).not.toHaveBeenCalled();
@@ -391,7 +396,9 @@ describe("Open", () => {
 
     expect(click.defaultPrevented).toBe(true);
     expect(result.status).toBe("success");
-    expect(result.command).toBe("launcher:open-this-window");
+    expect(
+      lumine.commands.canDispatch(host.getModel().getElement(), "launcher:open-this-window"),
+    ).toBe(false);
     expect(lumine.project.getPaths()).toEqual([folder]);
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
@@ -493,9 +500,12 @@ describe("Open", () => {
       const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
       const host = await show();
       for (const modifiers of [primaryClick, { altKey: true }]) {
-        const { click, result } = await clickChoice(host, id, modifiers, ".primary-text");
+        const action = jasmine.createSpy("unavailable action");
+        const subscription = host.getModel().onDidStartAction(action);
+        const { click } = await clickChoice(host, id, modifiers, ".primary-text", false);
+        subscription.dispose();
         expect(click.defaultPrevented).toBe(true);
-        expect(result.status).toBe("unavailable");
+        expect(action).not.toHaveBeenCalled();
         expect(host.isVisible()).toBe(true);
         expect(host.getModel().getSelectedItem().id).toBe(id);
       }
@@ -512,11 +522,16 @@ describe("Open", () => {
       const open = spyOn(external, "openExternal").and.resolveTo("");
       const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
       const host = await show();
-      const { click, result } = await clickChoice(host, id, { shiftKey: true }, ".primary-text");
+      const action = jasmine.createSpy("unavailable action");
+      const subscription = host.getModel().onDidStartAction(action);
+      const { click } = await clickChoice(host, id, { shiftKey: true }, ".primary-text", false);
+      subscription.dispose();
 
       expect(click.defaultPrevented).toBe(true);
-      expect(result.status).toBe("unavailable");
-      expect(result.command).toBe("launcher:open-this-window");
+      expect(action).not.toHaveBeenCalled();
+      expect(
+        lumine.commands.canDispatch(host.getModel().getElement(), "launcher:open-this-window"),
+      ).toBe(false);
       expect(host.isVisible()).toBe(true);
       expect(host.getModel().getSelectedItem().id).toBe(id);
       expect(lumine.project.getPaths()).toEqual([]);
