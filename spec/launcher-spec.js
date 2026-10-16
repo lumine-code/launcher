@@ -360,7 +360,10 @@ describe("Open", () => {
     selected = [folder];
     const host = await show();
     const action = jasmine.createSpy("unavailable action");
-    const subscription = host.getModel().onDidStartAction(action);
+    const subscription = new CompositeDisposable(
+      host.getModel().onDidStartAction(action),
+      host.getModel().onDidFinishAction(action),
+    );
     await clickChoice(host, "project-folder", { altKey: true }, undefined, false);
     subscription.dispose();
 
@@ -396,9 +399,7 @@ describe("Open", () => {
 
     expect(click.defaultPrevented).toBe(true);
     expect(result.status).toBe("success");
-    expect(
-      lumine.commands.canDispatch(host.getModel().getElement(), "launcher:open-this-window"),
-    ).toBe(false);
+    expect(result.command).toBe("launcher:open-this-window");
     expect(lumine.project.getPaths()).toEqual([folder]);
     expect(newWindow).not.toHaveBeenCalled();
     expect(detachedWindow).not.toHaveBeenCalled();
@@ -501,7 +502,10 @@ describe("Open", () => {
       const host = await show();
       for (const modifiers of [primaryClick, { altKey: true }]) {
         const action = jasmine.createSpy("unavailable action");
-        const subscription = host.getModel().onDidStartAction(action);
+        const subscription = new CompositeDisposable(
+          host.getModel().onDidStartAction(action),
+          host.getModel().onDidFinishAction(action),
+        );
         const { click } = await clickChoice(host, id, modifiers, ".primary-text", false);
         subscription.dispose();
         expect(click.defaultPrevented).toBe(true);
@@ -523,7 +527,10 @@ describe("Open", () => {
       const showInFolder = spyOn(external, "showInFolder").and.resolveTo("");
       const host = await show();
       const action = jasmine.createSpy("unavailable action");
-      const subscription = host.getModel().onDidStartAction(action);
+      const subscription = new CompositeDisposable(
+        host.getModel().onDidStartAction(action),
+        host.getModel().onDidFinishAction(action),
+      );
       const { click } = await clickChoice(host, id, { shiftKey: true }, ".primary-text", false);
       subscription.dispose();
 
