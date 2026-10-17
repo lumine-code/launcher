@@ -438,6 +438,7 @@ describe("Open", () => {
     expect(actions.map(({ command }) => command)).toEqual([
       "launcher:open-new-window",
       "launcher:open-this-window",
+      "select-list:toggle-keep-open",
     ]);
     const [newProject, currentProject] = actions;
     expect(newProject.primary).toBe(true);
@@ -556,7 +557,10 @@ describe("Open", () => {
       const list = host.getModel();
       await list.selectItemById(id);
       const actions = list.getAvailableActions();
-      expect(actions.map(({ command }) => command)).toEqual(["launcher:open-current"]);
+      expect(actions.map(({ command }) => command)).toEqual([
+        "launcher:open-current",
+        "select-list:toggle-keep-open",
+      ]);
       expect(actions[0].primary).toBe(true);
       expect(actions[0].keystrokes).toContain("enter");
       const result = await confirmWithEnter(host);
@@ -644,7 +648,7 @@ describe("Open", () => {
       const list = host.getModel();
       await list.selectItemById(id);
 
-      expect(actionNames(list)).toEqual(["launcher:open-current"]);
+      expect(actionNames(list)).toEqual(["launcher:open-current", "select-list:toggle-keep-open"]);
       for (const command of [
         "launcher:open-new-window",
         "launcher:open-detached-window",

@@ -136,6 +136,26 @@ describe("Launcher New", () => {
     expect(pane.getPendingItem()).toBeFalsy();
   });
 
+  it("creates repeatedly in one kept-open picker and releases the picker on cancellation", async () => {
+    const pane = context().pane;
+    const host = await main.create(event());
+    const list = host.getModel();
+    await list.selectItemById("text-editor");
+    await list.runAction("select-list:toggle-keep-open");
+
+    await list.confirmSelection();
+    await list.confirmSelection();
+
+    const editors = pane.getItems();
+    expect(editors.length).toBe(2);
+    expect(editors[0]).not.toBe(editors[1]);
+    expect(editors.every((item) => lumine.workspace.isTextEditor(item))).toBe(true);
+    expect(host.isVisible()).toBe(true);
+    expect(host.isDestroyed()).toBe(false);
+    await host.cancel();
+    expect(host.isDestroyed()).toBe(true);
+  });
+
   for (const id of ["jupyter-view", "terminal", "graviss"]) {
     it(`wires the actual ${id} package into New and opens its item in center`, async () => {
       if (id === "terminal") localStorage.setItem("terminal.autoShellSet", "true");
