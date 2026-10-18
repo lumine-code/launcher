@@ -1,9 +1,9 @@
 {
   "title": "launcher",
   "description": "Choose how to open a Markdown file, with the default editor identified.",
-  "recordedOn": "2026-10-15",
-  "sourceRevision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
-  "themeSourceRevision": "828c35ac1816466699effa6f7cf7eedccc930ff9",
+  "recordedOn": "2026-10-18",
+  "sourceRevision": "70cf2554c842d31503adbf448df76dd846f57fd0",
+  "themeSourceRevision": "45b22049e87256e9327beb0b350e67fe81d7fc81",
   "mode": "normal",
   "fontSettings": "default",
   "scenario": "demo.js",
@@ -11,8 +11,8 @@
   "environment": {
     "platform": "win32",
     "arch": "x64",
-    "electron": "44.7.1",
-    "chrome": "152.0.7977.149",
+    "electron": "44.9.0",
+    "chrome": "152.0.7977.167",
     "devicePixelRatio": 1,
     "locale": "en-GB",
     "fontFamily": "Fira Code, Menlo, DejaVu Sans Mono, Consolas, monospace",
@@ -24,47 +24,47 @@
   "privacy": { "version": 1, "location": "neutral", "textChecked": true },
   "sources": {
     "editor": {
-      "revision": "23b7721a75e694c6c2961b2d4953d681c25410ca",
+      "revision": "10950c83cb6d964aadbcf4036af67c6484c1341d",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "package": {
-      "revision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
+      "revision": "70cf2554c842d31503adbf448df76dd846f57fd0",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "launcher": {
-      "revision": "2c377e32324bc12f3af3d145cd131ff9fa798b94",
+      "revision": "70cf2554c842d31503adbf448df76dd846f57fd0",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "graviss": {
-      "revision": "317f45e30b875de464f298a4199de65d63528586",
+      "revision": "bb53a6e54c6bb04bf694e2d0d0f95d08f1c06652",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "jupyter-view": {
-      "revision": "8035c0eafae4b2b129162817a91031c649229d6c",
+      "revision": "8d67c3e996337116da181b4f5b8a81bfa479e927",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "language-gfm": {
-      "revision": "fb2a7dbc611e6397fd6e27a3651e03af08457ac2",
+      "revision": "2220adaf1ebdc993a9316394d2cc1be6b48fa1ff",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "markdown-preview": {
-      "revision": "9774b5c0435f647127bc9ccb81fca7086ffdc456",
+      "revision": "7ab1a261d89dd453d6af111e81ae26f9744cc325",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "one-theme": {
-      "revision": "828c35ac1816466699effa6f7cf7eedccc930ff9",
+      "revision": "45b22049e87256e9327beb0b350e67fe81d7fc81",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     "terminal": {
-      "revision": "81263b5025075105341ca2831bb341048563d641",
+      "revision": "13fe4967fdf9d5050d10bef999798dffefa34412",
       "dirty": false,
       "workingTreeHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     }
@@ -81,14 +81,14 @@
       "label": "Choose how to open a Markdown file, with the default editor identified.",
       "width": 1100,
       "height": 620,
-      "sha256": "d0390a63736268e9fb1af06875727393dfe7fde23795055344aa8674b924c9c1"
+      "sha256": "d1a713bffc4e0007de54e3990b8fa2e891c98f71cb0a1f985b6d188e9d3116c7"
     },
     {
       "file": "demo-new.png",
       "label": "Create text, notebook, terminal, or Graviss content in the editor area.",
       "width": 1100,
       "height": 620,
-      "sha256": "9b04948e36e83879db12ce67ab54f32d9b5ab63f24bf3a82deded1f33fbef9dc"
+      "sha256": "b07a3ece0f47761b37b293738e9429dd98efe5dbec678114a53af3a59fab4ad2"
     }
   ]
 }
