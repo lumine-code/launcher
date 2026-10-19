@@ -73,7 +73,7 @@ describe("Launcher New", () => {
     return { ...registration, release, began };
   }
 
-  it("labels the public menu actions with real ellipses and routes contextual Open to its wrapper", () => {
+  it("labels public menu actions and keeps New in empty panes and tab bars", async () => {
     const menus = require("../menus/main.json");
     const packageActions = menus.menu[0].submenu[0].submenu;
     expect(packageActions).toEqual([
@@ -92,6 +92,29 @@ describe("Launcher New", () => {
       }
     }
     expect(JSON.stringify(menus)).not.toContain("\ufffd");
+
+    const pane = lumine.workspace.getActivePane();
+    const paneElement = pane.getElement();
+    const itemViews = paneElement.querySelector(".item-views");
+    const commandsAt = (target) =>
+      lumine.contextMenu.templateForElement(target).map((item) => item.command);
+    expect(commandsAt(itemViews)).toContain("launcher:new");
+
+    const editor = await lumine.workspace.open(__filename, { pane, opener: "text-editor" });
+    expect(commandsAt(editor.getElement())).not.toContain("launcher:new");
+    expect(commandsAt(editor.getElement())).toContain("launcher:open-resource");
+
+    const otherItem = makeItem();
+    await lumine.workspace.open(otherItem, { pane });
+    expect(commandsAt(otherItem)).not.toContain("launcher:new");
+    const tabBar = document.createElement("ul");
+    tabBar.className = "tab-bar";
+    paneElement.appendChild(tabBar);
+    try {
+      expect(commandsAt(tabBar)).toContain("launcher:new");
+    } finally {
+      tabBar.remove();
+    }
   });
 
   it("opens the clicked inactive tab resource through one contextual dispatch", async () => {

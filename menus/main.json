@@ -33,12 +33,6 @@
         "type": "separator"
       },
       {
-        "label": "New…",
-        "command": "launcher:new",
-        "group": "views",
-        "order": 10
-      },
-      {
         "label": "Open…",
         "command": "launcher:open-resource",
         "group": "views",
@@ -46,6 +40,14 @@
       },
       {
         "type": "separator"
+      }
+    ],
+    "lumine-pane:not(lumine-dock lumine-pane) > .item-views:empty": [
+      {
+        "label": "New…",
+        "command": "launcher:new",
+        "group": "views",
+        "order": 10
       }
     ],
     "lumine-pane:not(lumine-dock lumine-pane) > .tab-bar": [

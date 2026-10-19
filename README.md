@@ -39,9 +39,9 @@ Commands available in `.launcher-new .select-list`:
 
 ## Usage
 
-Choose New… from File or a center pane's context menu to select a content type. The chosen provider creates a fresh item; Launcher opens it in that pane's editor area. Each provider owns its document, process, persistence, and save behavior.
+Choose New Content… from File or New… from an empty center pane or its tab bar's context menu to select a content type. The chosen provider creates a fresh item; Launcher opens it in that pane's editor area. Each provider owns its document, process, persistence, and save behavior.
 
-Choose Open… from File to select a file and its opener. From the tree or a saved center item, Open… uses that resource directly. The picker marks the action ordinary opening would use as Default. Window destinations apply only to actions that support them. Folders open as projects in a new window by default; This Window switches the current project to the folder.
+Choose Open File… from File to select a file and its opener. From the tree or a saved center item, Open… uses that resource directly. The picker marks the action ordinary opening would use as Default. Window destinations apply only to actions that support them. Folders open as projects in a new window by default; This Window switches the current project to the folder.
 
 Packages can request either picker through the launcher service. Capture the initiating pane before asynchronous work. Explicit opening accepts a local path or file URL, zero-based cursor positions, and a URI fragment for viewer destinations. Project requests preserve their complete folder set and launch modes; see the service contract for the request shape.
 
