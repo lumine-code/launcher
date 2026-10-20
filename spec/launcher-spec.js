@@ -63,7 +63,8 @@ describe("Open", () => {
       path.isAbsolute(relative)
     )
       throw new Error("Open scratch directory escaped the private temporary root");
-    fs.rmSync(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+    // Synchronous retries would block the IPC callbacks that release file handles.
+    await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   });
 
   const event = () => ({ target: row });
