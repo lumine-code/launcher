@@ -48,7 +48,7 @@
     },
     "launcher": {
       "versions": {
-        "1.0.0": "provideLauncher"
+        "1.1.0": "provideLauncher"
       }
     }
   },

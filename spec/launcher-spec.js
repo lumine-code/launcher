@@ -85,8 +85,9 @@ describe("Open", () => {
       open,
       ...options,
     };
-    leases.add(lumine.workspace.addPathOpener(descriptor));
-    return { viewer, open, descriptor };
+    const lease = lumine.workspace.addPathOpener(descriptor);
+    leases.add(lease);
+    return { viewer, open, descriptor, lease };
   }
 
   function hiddenEditorWindow() {
@@ -1211,5 +1212,368 @@ describe("Open", () => {
     ).toBeRejectedWithError("The selected opener is no longer available.");
     expect(detachedWindow).not.toHaveBeenCalled();
     expect(newWindow).not.toHaveBeenCalled();
+  });
+
+  describe("request-scoped opener overrides", () => {
+    const viewerId = "launcher:spec-viewer";
+    const openerActionNames = (list) =>
+      actionNames(list).filter((command) => command.startsWith("launcher:"));
+    const overrideFor = (open, destinations = ["current"]) => ({
+      id: viewerId,
+      destinations,
+      open,
+    });
+    const openWith = (openerOverrides, options = {}) =>
+      main.provideLauncher().open({ path: file, openerOverrides, ...options });
+
+    it("uses the public opener's row and default while opening through the request callback", async () => {
+      const canOpen = jasmine.createSpy("public opener availability").and.returnValue(true);
+      const { viewer, open } = registerViewer({ canOpen });
+      const pane = lumine.workspace.getActivePane();
+      const other = pane.splitRight({ activate: false });
+      const override = jasmine
+        .createSpy("request opening")
+        .and.callFake((uri, options) => lumine.workspace.open(viewer, options));
+      lumine.config.set("core.allowPendingPaneItems", true);
+      lumine.config.set("tree-view.alwaysOpenExisting", true);
+      const host = await openWith([overrideFor(override)], {
+        pane,
+        initialLine: 4,
+        initialColumn: 2,
+        uriFragment: "#section=example",
+      });
+      const list = host.getModel();
+      const choice = list.getSelectedItem();
+      expect(choice.id).toBe(viewerId);
+      expect(choice.label).toBe("Document Viewer");
+      expect(choice.isDefault).toBe(true);
+      expect(choiceRow(list, viewerId).querySelector(".badge").textContent).toBe("Default");
+      expect(openerActionNames(list)).toEqual(["launcher:open-current"]);
+      other.activate();
+
+      const result = await list.runAction("launcher:open-current");
+
+      expect(result.status).toBe("success");
+      expect(override).toHaveBeenCalledOnceWith(file, {
+        opener: viewerId,
+        pathKind: "file",
+        pane,
+        pending: true,
+        searchAllPanes: true,
+        initialLine: 4,
+        initialColumn: 2,
+        uriFragment: "#section=example",
+        signal: result.signal,
+      });
+      expect(pane.getActiveItem()).toBe(viewer);
+      expect(pane.getPendingItem()).toBe(viewer);
+      expect(other.getItems()).toEqual([]);
+      for (const [, options] of canOpen.calls.allArgs()) {
+        expect(options.openerOverrides).toBeUndefined();
+        expect(options.openerOverride).toBeUndefined();
+      }
+      expect(open).not.toHaveBeenCalled();
+      expect(host.isDestroyed()).toBe(true);
+    });
+
+    it("leaves another selected opener and later ordinary requests unchanged", async () => {
+      const { open, viewer } = registerViewer();
+      const override = jasmine.createSpy("request opening").and.resolveTo(null);
+      let host = await openWith([overrideFor(override)]);
+      await host.getModel().selectItemById("text-editor");
+      await host.getModel().runAction("launcher:open-current");
+      expect(lumine.workspace.getPaneItems().some((item) => item.getPath?.() === file)).toBe(true);
+      expect(override).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+
+      host = await main.provideLauncher().open({ path: file });
+      await host.getModel().selectItemById(viewerId);
+      await host.getModel().runAction("launcher:open-current");
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(lumine.workspace.paneForItem(viewer)).toBeDefined();
+      expect(override).not.toHaveBeenCalled();
+    });
+
+    it("captures the callback and destination list before asynchronous path resolution", async () => {
+      registerViewer();
+      const stat = await fsPromises.stat(file);
+      let release;
+      spyOn(fsPromises, "stat").and.returnValue(new Promise((resolve) => (release = resolve)));
+      const override = jasmine.createSpy("original request opening").and.resolveTo(null);
+      const replacement = jasmine.createSpy("mutated request opening").and.resolveTo(null);
+      const descriptor = overrideFor(override);
+      const descriptors = [descriptor];
+      const pending = openWith(descriptors);
+      descriptor.open = replacement;
+      descriptor.id = "text-editor";
+      descriptor.destinations[0] = "detached-window";
+      descriptors.length = 0;
+      release(stat);
+      const host = await pending;
+
+      expect(openerActionNames(host.getModel())).toEqual(["launcher:open-current"]);
+      await host.getModel().runAction("launcher:open-current");
+
+      expect(override).toHaveBeenCalledTimes(1);
+      expect(replacement).not.toHaveBeenCalled();
+    });
+
+    it("does not offer or fall through to an independent process for an overridden opener", async () => {
+      const { open } = registerViewer();
+      const override = jasmine.createSpy("request opening").and.resolveTo(null);
+      const host = await openWith([
+        overrideFor(override, ["current", "detached-window", "this-window"]),
+      ]);
+      const list = host.getModel();
+      expect(openerActionNames(list)).toEqual([
+        "launcher:open-current",
+        "launcher:open-detached-window",
+        "launcher:open-this-window",
+      ]);
+      const context = main.pickers.get(host.window).context;
+      const workspaceOpen = spyOn(lumine.workspace, "open").and.callThrough();
+
+      await expectAsync(
+        main.execute(context, list.getSelectedItem(), "new-window"),
+      ).toBeRejectedWithError("Document Viewer cannot use this window destination.");
+
+      expect(newWindow).not.toHaveBeenCalled();
+      expect(workspaceOpen).not.toHaveBeenCalled();
+      expect(override).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("intersects callback destinations with the public opener's actual capabilities", async () => {
+      registerViewer({ destinations: ["current"] });
+      const override = jasmine.createSpy("request opening").and.resolveTo(null);
+      const host = await openWith([
+        overrideFor(override, ["current", "detached-window", "this-window"]),
+      ]);
+
+      expect(openerActionNames(host.getModel())).toEqual(["launcher:open-current"]);
+      await host.getModel().runAction("launcher:open-current");
+      expect(override).toHaveBeenCalledTimes(1);
+      expect(detachedWindow).not.toHaveBeenCalled();
+    });
+
+    it("cannot introduce a new opener row when the request names no available public opener", async () => {
+      const override = jasmine.createSpy("unregistered opening").and.resolveTo(null);
+      const host = await openWith([
+        { id: "launcher:unregistered", destinations: ["current"], open: override },
+      ]);
+
+      expect(
+        host
+          .getModel()
+          .getItems()
+          .some(({ id }) => id === "launcher:unregistered"),
+      ).toBe(false);
+      await host.getModel().runAction("launcher:open-current");
+      expect(override).not.toHaveBeenCalled();
+      expect(lumine.workspace.getActiveTextEditor().getPath()).toBe(file);
+    });
+
+    it("opens an overridden viewer in the chosen detached pane before presenting its window", async () => {
+      const { viewer, open } = registerViewer();
+      const source = lumine.workspace.getActivePane();
+      const { window, pane } = hiddenEditorWindow();
+      const override = jasmine
+        .createSpy("detached request opening")
+        .and.callFake((uri, options) => {
+          expect(window.show).not.toHaveBeenCalled();
+          return lumine.workspace.open(viewer, options);
+        });
+      const host = await openWith([overrideFor(override, ["detached-window"])], { pane: source });
+      expect(openerActionNames(host.getModel())).toEqual(["launcher:open-detached-window"]);
+
+      const result = await host.getModel().runAction("launcher:open-detached-window");
+
+      expect(override).toHaveBeenCalledOnceWith(file, {
+        opener: viewerId,
+        pathKind: "file",
+        destination: "detached-window",
+        pane,
+        signal: result.signal,
+      });
+      expect(pane.getActiveItem()).toBe(viewer);
+      expect(source.getItems()).toEqual([]);
+      expect(window.show).toHaveBeenCalledTimes(1);
+      expect(window.focus).toHaveBeenCalledTimes(1);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("uses the main destination pane after switching this window's project", async () => {
+      const { viewer, open } = registerViewer();
+      lumine.project.setPaths([scratch]);
+      const setState = spyOn(lumine.project, "setState").and.resolveTo(false);
+      const pane = lumine.workspace.getMainWindow().getEditorContainer().getActivePane();
+      const override = jasmine
+        .createSpy("project request opening")
+        .and.callFake((uri, options) => lumine.workspace.open(viewer, options));
+      const host = await openWith([overrideFor(override, ["this-window"])]);
+
+      expect(openerActionNames(host.getModel())).toEqual(["launcher:open-this-window"]);
+      const result = await host.getModel().runAction("launcher:open-this-window");
+
+      expect(setState).toHaveBeenCalledOnceWith([scratch]);
+      expect(override).toHaveBeenCalledOnceWith(file, {
+        opener: viewerId,
+        pathKind: "file",
+        pane,
+        signal: result.signal,
+      });
+      expect(pane.getActiveItem()).toBe(viewer);
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it("keeps a failed callback's picker available and never retries the workspace opener", async () => {
+      const { open } = registerViewer();
+      const override = jasmine
+        .createSpy("failed request opening")
+        .and.rejectWith(new Error("Viewer failed"));
+      const host = await openWith([overrideFor(override)]);
+      const workspaceOpen = spyOn(lumine.workspace, "open").and.callThrough();
+
+      await expectAsync(host.getModel().runAction("launcher:open-current")).toBeRejectedWithError(
+        "Viewer failed",
+      );
+
+      expect(host.isDestroyed()).toBe(false);
+      expect(workspaceOpen).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+      expect(lumine.workspace.getPaneItems()).toEqual([]);
+    });
+
+    for (const value of [null, undefined]) {
+      it(`does not fall back to the public opener when an override returns ${value}`, async () => {
+        const { open } = registerViewer();
+        const override = jasmine.createSpy("empty request opening").and.resolveTo(value);
+        const host = await openWith([overrideFor(override)]);
+        const workspaceOpen = spyOn(lumine.workspace, "open").and.callThrough();
+
+        await host.getModel().runAction("launcher:open-current");
+
+        expect(override).toHaveBeenCalledTimes(1);
+        expect(workspaceOpen).not.toHaveBeenCalled();
+        expect(open).not.toHaveBeenCalled();
+      });
+    }
+
+    it("rejects an overridden opener that disappears before the selected action", async () => {
+      const { lease, open } = registerViewer();
+      const override = jasmine.createSpy("retired request opening").and.resolveTo(null);
+      const host = await openWith([overrideFor(override)]);
+      lease.dispose();
+
+      await expectAsync(host.getModel().runAction("launcher:open-current")).toBeRejectedWithError(
+        "The selected opener is no longer available.",
+      );
+
+      expect(override).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+      expect(host.isDestroyed()).toBe(false);
+    });
+
+    for (const retirement of ["cancellation", "deactivation"]) {
+      it(`passes the action's cancellation to an unfinished callback on ${retirement}`, async () => {
+        const { open } = registerViewer();
+        let release, started;
+        const pending = new Promise((resolve) => (release = resolve));
+        const began = new Promise((resolve) => (started = resolve));
+        const override = jasmine
+          .createSpy("unfinished request opening")
+          .and.callFake((uri, options) => {
+            started(options);
+            return pending;
+          });
+        const host = await openWith([overrideFor(override)]);
+        const execute = spyOn(main, "execute").and.callThrough();
+        const action = host.getModel().runAction("launcher:open-current");
+        const options = await began;
+        if (retirement === "deactivation") await lumine.packages.deactivatePackage("launcher");
+        else host.cancel();
+        const result = await action;
+
+        expect(result.status).toBe("aborted");
+        expect(options.signal).toBe(result.signal);
+        expect(options.signal.aborted).toBe(true);
+        release(null);
+        await expectAsync(execute.calls.mostRecent().returnValue).toBeRejectedWithError(
+          "Opening was cancelled.",
+        );
+        expect(open).not.toHaveBeenCalled();
+        expect(lumine.workspace.getPaneItems()).toEqual([]);
+        expect(host.isDestroyed()).toBe(true);
+      });
+    }
+
+    it("rechecks public provider retirement after awaiting a detached window", async () => {
+      const { lease } = registerViewer();
+      const source = lumine.workspace.getActivePane();
+      const { window, pane } = hiddenEditorWindow();
+      let release;
+      detachedWindow.and.returnValue(new Promise((resolve) => (release = resolve)));
+      const override = jasmine.createSpy("retired request opening").and.resolveTo(null);
+      const host = await openWith([overrideFor(override, ["detached-window"])], { pane: source });
+      const action = host.getModel().runAction("launcher:open-detached-window");
+      await conditionPromise(() => detachedWindow.calls.count() === 1);
+      lease.dispose();
+      release(window);
+
+      await expectAsync(action).toBeRejectedWithError(
+        "The selected opener is no longer available.",
+      );
+      expect(override).not.toHaveBeenCalled();
+      expect(window.destroy).toHaveBeenCalledTimes(1);
+      expect(window.show).not.toHaveBeenCalled();
+      expect(pane.isDestroyed()).toBe(true);
+      expect(source.isDestroyed()).toBe(false);
+      expect(host.isDestroyed()).toBe(false);
+    });
+
+    it("rejects malformed override requests before selecting or opening a resource", async () => {
+      const open = jasmine.createSpy("invalid request opening");
+      const valid = overrideFor(open);
+      const malformed = [
+        null,
+        {},
+        [null],
+        Array(1),
+        [{ ...valid, id: "" }],
+        [valid, valid],
+        [{ ...valid, destinations: [] }],
+        [{ ...valid, destinations: Array(1) }],
+        [{ ...valid, destinations: ["current", "current"] }],
+        [{ ...valid, destinations: ["new-window"] }],
+        [{ ...valid, open: false }],
+      ];
+      const notification = spyOn(lumine.notifications, "addError");
+      const native = spyOn(lumine.workspace.getMainWindow(), "showOpenDialog");
+      for (const descriptors of malformed) {
+        expect(await openWith(descriptors)).toBeUndefined();
+      }
+      expect(await main.provideLauncher().open({ openerOverrides: [valid] })).toBeUndefined();
+      expect(await openWith([valid], { project: { paths: [folder] } })).toBeUndefined();
+      expect(notification).toHaveBeenCalledTimes(malformed.length + 2);
+      expect(native).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+      expect(main.requests.size).toBe(0);
+      expect(main.pickers.size).toBe(0);
+    });
+
+    it("rejects a directory override without offering directory actions", async () => {
+      const override = jasmine.createSpy("directory request opening").and.resolveTo(null);
+      const notification = spyOn(lumine.notifications, "addWarning");
+
+      expect(await openWith([overrideFor(override)], { path: folder })).toBeUndefined();
+
+      expect(notification).toHaveBeenCalledOnceWith(
+        "Opener overrides require an explicit file path.",
+      );
+      expect(override).not.toHaveBeenCalled();
+      expect(main.requests.size).toBe(0);
+      expect(main.pickers.size).toBe(0);
+    });
   });
 });
