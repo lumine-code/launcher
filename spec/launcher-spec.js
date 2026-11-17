@@ -762,29 +762,46 @@ describe("Open", () => {
     expect(open.calls.mostRecent().args[0]).toBe(otherFile);
   });
 
-  it("selects a resource in a native dialog for global Open", async () => {
+  it("selects a file before showing global Open and preserves the pane captured before the dialog", async () => {
     const window = lumine.workspace.getMainWindow();
     const pane = window.getEditorContainer().getActivePane();
-    const choose = spyOn(window, "showOpenDialog").and.resolveTo({
-      canceled: false,
-      filePaths: [otherFile],
-    });
+    let complete;
+    const choose = spyOn(window, "showOpenDialog").and.callFake(
+      () => new Promise((resolve) => (complete = resolve)),
+    );
+    const present = spyOn(lumine.workspace, "addSelectList").and.callThrough();
     const focused = await lumine.workspace.open(file);
-    const host = await main.open({ target: focused.getElement() });
+    const pending = main.open({ target: focused.getElement() });
+    await conditionPromise(() => Boolean(complete));
+    expect(present).not.toHaveBeenCalled();
+    expect(main.pickers.size).toBe(0);
     const another = pane.splitRight();
     another.activate();
+    complete({ canceled: false, filePaths: [otherFile] });
+    const host = await pending;
+    expect(main.pickers.get(window).host).toBe(host);
+    expect(host.getModel().getSelectedItem().id).toBe("text-editor");
+    expect(
+      host
+        .getModel()
+        .getItems()
+        .map(({ id }) => id),
+    ).toEqual(["text-editor", "open-external", "open-external:show"]);
     await host.getModel().runAction("launcher:open-current");
     expect(choose).toHaveBeenCalledOnceWith({ title: "Open", properties: ["openFile"] });
     expect(pane.getItems().some((item) => item.getPath?.() === otherFile)).toBe(true);
     expect(another.getItems()).toEqual([]);
   });
 
-  it("keeps a cancelled native dialog from creating a picker", async () => {
+  it("creates no Launcher when the initial native file dialog is cancelled", async () => {
     spyOn(lumine.workspace.getMainWindow(), "showOpenDialog").and.resolveTo({
       canceled: true,
       filePaths: [],
     });
+    const present = spyOn(lumine.workspace, "addSelectList").and.callThrough();
+
     expect(await main.open({ target: lumine.workspace.getElement() })).toBeUndefined();
+    expect(present).not.toHaveBeenCalled();
     expect(main.pickers.size).toBe(0);
     expect(main.requests.size).toBe(0);
   });

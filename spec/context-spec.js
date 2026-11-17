@@ -74,6 +74,7 @@ describe("Launcher command context", () => {
     expect(main.pickers.get(host.window).mode).toBe("open");
     expect(main.pickers.get(host.window).context.pane).toBe(original);
     expect(main.pickers.get(host.window).context.path).toBe(__filename);
+    expect(host.getModel().getSelectedItem().isDefault).toBe(true);
   });
 
   it("owns a main-dock request in its captured auxiliary document presentation and clears it on close", async () => {

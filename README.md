@@ -5,6 +5,7 @@ Create workspace content and choose how and where to open resources.
 ## Features
 
 - **New content**: choose a registered content type and create it in the captured editor pane.
+- **File selection**: select an existing file from an empty editor pane through the system dialog.
 - **Resource opening**: choose an available opener, with the default first and the text editor always available for files.
 - **Window destinations**: open a document in the current window, a new project window, or a detached editor window.
 - **Project and system actions**: open folders as projects, open resources externally, or reveal them in the system file manager.
@@ -24,7 +25,7 @@ Commands available in `lumine-workspace`:
 
 - `launcher:new`: choose new content for the current editor pane,
 - `launcher:open`: choose a resource and how to open it,
-- `launcher:open-resource`: choose how to open the selected tree entry or saved center content.
+- `launcher:open-resource`: choose how to open the selected resource, or choose a file from an empty center pane.
 
 Commands available in `.launcher .select-list` when opening a resource:
 
@@ -41,7 +42,11 @@ Commands available in `.launcher-new .select-list`:
 
 Choose New Content… from File or New… from an empty center pane or its tab bar's context menu to select a content type. The chosen provider creates a fresh item; Launcher opens it in that pane's editor area. Each provider owns its document, process, persistence, and save behavior.
 
-Choose Open File… from File to select a file and its opener. From the tree or a saved center item, Open… uses that resource directly. The picker marks the action ordinary opening would use as Default. Window destinations apply only to actions that support them. Folders open as projects in a new window by default; This Window switches the current project to the folder.
+Choose Open File… from File or Open… from an empty center pane to select a file through the system dialog, then choose its opener in Launcher. Cancelling the file dialog ends the request. From the tree or a saved center item, Open… lists that resource's openers directly. The original pane and window remain the destination throughout.
+
+The system file dialog starts at the first project root. Without a project root, it uses the system's default location.
+
+The picker marks the action ordinary opening would use as Default. Window destinations apply only to actions that support them. Folders open as projects in a new window by default; This Window switches the current project to the folder.
 
 Packages can request either picker through the launcher service. Capture the initiating pane before asynchronous work. Explicit opening accepts a local path or file URL, zero-based cursor positions, and a URI fragment for viewer destinations. Project requests preserve their complete folder set and launch modes; see the service contract for the request shape.
 

@@ -22,7 +22,7 @@ describe("Launcher resource command availability", () => {
     leases.dispose();
     target.remove();
   });
-  it("allows native Open independently but requires one saved resource for its alias", () => {
+  it("allows global Open independently but requires one selected resource in the tree", () => {
     const has = (id) => lumine.commands.canDispatch(target, "launcher:" + id);
     expect(has("open-resource")).toBe(false);
     expect(has("open")).toBe(true);
@@ -30,5 +30,15 @@ describe("Launcher resource command availability", () => {
     expect(has("open-resource")).toBe(false);
     snapshot = { count: 1 };
     expect(has("open-resource")).toBe(true);
+  });
+
+  it("allows contextual Open in an empty pane and rejects an unsaved document", async () => {
+    const pane = lumine.workspace.getCenter().getActivePane();
+    const emptyView = pane.getElement().querySelector(".item-views");
+    expect(lumine.commands.canDispatch(emptyView, "launcher:open-resource")).toBe(true);
+
+    const editor = await lumine.workspace.open();
+    expect(lumine.commands.canDispatch(editor.getElement(), "launcher:open-resource")).toBe(false);
+    await pane.destroyItem(editor);
   });
 });

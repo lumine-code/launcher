@@ -51,7 +51,9 @@ type Launcher = {
 };
 ```
 
-`pane` is an available center pane and determines its presentation window. Capture it before awaiting unrelated work. Without a pane, Launcher captures the current document pane. `open` accepts either `path` or `project`; without either, it shows a native file chooser before the opener list. Paths may be local paths or file URLs. Cursor positions are zero-based non-negative integers. A separate `uriFragment` overrides the fragment carried by a file URL.
+`pane` is an available center pane and determines its presentation window. Capture it before awaiting unrelated work. Without a pane, Launcher captures the current document pane. `open` accepts either `path` or `project`; without either, it immediately shows the native file chooser, then displays the selected file's openers in Launcher. Cancelling this dialog ends the request without creating a Launcher list. Paths may be local paths or file URLs. Cursor positions are zero-based non-negative integers. A separate `uriFragment` overrides the fragment carried by a file URL.
+
+The native file chooser starts at the first root from `lumine.project.getPaths()`. With no project roots, Launcher leaves the initial location to the system dialog.
 
 ## Request-scoped opener overrides
 
@@ -85,7 +87,7 @@ async openResource(filePath) {
 
 The promise resolves when the picker is shown, rather than when an item is opened. The returned host exposes the ordinary select-list lifecycle. Requesting the same picker again dismisses it; requesting the other picker replaces it. Opening preserves the captured path, pane, positions, and fragment while the user chooses an action.
 
-Commands `launcher:open` and `launcher:new` expose the same operations to menus and keymaps. Their event detail accepts the corresponding options. The contextual wrapper `launcher:open-resource` captures the selected tree entry or saved center item and passes its explicit path to Open. Global Open always selects a resource when no explicit path or project is supplied, regardless of editor focus.
+Commands `launcher:open` and `launcher:new` expose the same operations to menus and keymaps. Their event detail accepts the corresponding options. The contextual wrapper `launcher:open-resource` captures the selected tree entry or saved center item and passes its explicit path to Open; from an empty center pane it immediately requests a file through the native chooser. Global Open requests a file when no explicit path or project is supplied, regardless of editor focus. The default opener is selected when the list opens.
 
 ## Teardown
 
