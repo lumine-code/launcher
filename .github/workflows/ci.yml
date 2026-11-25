@@ -52,9 +52,6 @@ jobs:
         shell: bash
     env:
       LUMINE_JASMINE_REPORTER: list
-      TEMP: ${{ github.workspace }}/launcher-spec-tmp
-      TMP: ${{ github.workspace }}/launcher-spec-tmp
-      TMPDIR: ${{ github.workspace }}/launcher-spec-tmp
     steps:
       - uses: actions/checkout@v7
         with:
@@ -76,7 +73,18 @@ jobs:
       - name: Use HTTPS for GitHub git dependencies
         run: git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
       - name: Create the private temporary directory
-        run: mkdir -p "$TEMP"
+        # Native Windows tools need a temporary path with native separators.
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const directory = path.resolve(process.env.GITHUB_WORKSPACE, "launcher-spec-tmp");
+          fs.mkdirSync(directory, { recursive: true });
+          const environment = ["TEMP", "TMP", "TMPDIR"]
+            .map((name) => `${name}=${directory}\n`)
+            .join("");
+          fs.appendFileSync(process.env.GITHUB_ENV, environment);
+          NODE
       - name: Install package dependencies
         working-directory: launcher
         run: npm ci --ignore-scripts
